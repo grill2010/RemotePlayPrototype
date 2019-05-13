@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2050
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ps4RemotePlayPrototype", "Ps4RemotePlayPrototype\Ps4RemotePlayPrototype.csproj", "{016AA790-079B-41B2-AFFF-B0A087B8AAB5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {232D2832-4CB6-402F-BD94-D9002067215C}
+	EndGlobalSection
+EndGlobal
