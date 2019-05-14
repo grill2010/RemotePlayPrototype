@@ -59,63 +59,31 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
 
         public byte[] Encrypt(byte[] data)
         {
-            try
-            {
-                byte[] iv = GetIV(_outputCtr);
-                ++_outputCtr;
-                return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            byte[] iv = GetIV(_outputCtr);
+            ++_outputCtr;
+
+            return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
         }
 
         public byte[] Encrypt(byte[] data, ulong ctr)
         {
-            try
-            {
-                byte[] iv = this.GetIV(ctr);
-                return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            byte[] iv = this.GetIV(ctr);
+            return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
         }
 
         public byte[] Decrypt(byte[] data)
         {
-            try
-            {
-                byte[] iv = GetIV(_inputCtr);
-                ++_inputCtr;
+            byte[] iv = GetIV(_inputCtr);
+            ++_inputCtr;
 
-                return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
         }
 
         public byte[] Decrypt(byte[] data, ulong ctr)
         {
-            try
-            {
-                byte[] iv = GetIV(ctr);
+            byte[] iv = GetIV(ctr);
 
-                return CreateAesCfbCipher(iv, doEncrypt: false)
-                    .DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
         }
 
         public byte[] GetNonceDerivative()
