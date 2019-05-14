@@ -12,8 +12,8 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
         private readonly byte[] _key;
         private readonly byte[] _nonce;
 
-        private int _inputCtr;
-        private int _outputCtr;
+        private ulong _inputCtr;
+        private ulong _outputCtr;
 
         public Session(byte[] key, byte[] nonce)
         {
@@ -42,7 +42,7 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
             return new byte[0];
         }
 
-        public byte[] Encrypt(byte[] data, int ctr)
+        public byte[] Encrypt(byte[] data, ulong ctr)
         {
             try
             {
@@ -72,7 +72,7 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
             return new byte[0];
         }
 
-        public byte[] Decrypt(byte[] data, int ctr)
+        public byte[] Decrypt(byte[] data, ulong ctr)
         {
             try
             {
@@ -102,10 +102,10 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
         /*** private methods ***/
         /***********************/
 
-        private byte[] GetIV(int counter)
+        private byte[] GetIV(ulong counter)
         {
-            byte[] counterBuffer = ByteUtil.IntToByteArray(counter);
-            byte[] hmacInput = ByteUtil.ConcatenateArrays(this._nonce, new byte[4], counterBuffer);
+            byte[] counterBuffer = ByteUtil.ULongToByteArray(counter);
+            byte[] hmacInput = ByteUtil.ConcatenateArrays(this._nonce, counterBuffer);
 
             byte[] hash = MacUtilities.CalculateMac("HMAC-SHA256", new KeyParameter(CryptoService.HmacKey), hmacInput);
             // Only take 16 bytes of calculated HMAC
