@@ -5,6 +5,7 @@ using Ps4RemotePlayPrototype.Protocol.Crypto;
 using Ps4RemotePlayPrototype.Protocol.Discovery;
 using Ps4RemotePlayPrototype.Protocol.Model;
 using Ps4RemotePlayPrototype.Protocol.Registration;
+using Ps4RemotePlayPrototype.Util;
 using Ps4RemotePlayPrototype.Setting;
 
 namespace Ps4RemotePlayPrototype
@@ -189,7 +190,7 @@ namespace Ps4RemotePlayPrototype
             string pin = textBoxRpKey.Text;
             if (pin.Length == 8 && int.TryParse(pin, out var parsedPin))
             {
-                labelRegistryAesKey.Text = CryptoService.GetRegistryAesKeyForPin(parsedPin);
+                labelRegistryAesKey.Text = HexUtil.Hexlify(CryptoService.GetRegistryAesKeyForPin(parsedPin));
                 labelRegistryAesKeyHeading.Visible = true;
             }
             else
