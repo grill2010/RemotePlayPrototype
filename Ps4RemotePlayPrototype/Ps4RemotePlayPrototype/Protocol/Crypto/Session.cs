@@ -1,19 +1,49 @@
 ﻿using System;
 using System.IO;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
 using Ps4RemotePlayPrototype.Util;
 
 namespace Ps4RemotePlayPrototype.Protocol.Crypto
 {
     public class Session
     {
+        private const string KeyExchangeAlgorithm = "ECDH";
+
         private readonly byte[] _key;
         private readonly byte[] _nonce;
 
         private ulong _inputCtr;
         private ulong _outputCtr;
+
+        public static AsymmetricCipherKeyPair GenerateKeyPair(DerObjectIdentifier algorithm)
+        {
+            var gen = new ECKeyPairGenerator();
+            var genParams = new ECKeyGenerationParameters(algorithm, new SecureRandom());
+
+            gen.Init(genParams);
+            return gen.GenerateKeyPair();
+        }
+
+        public static byte[] GetPublicKeyBytesFromKeyPair(AsymmetricCipherKeyPair keyPair)
+        {
+            return SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public).GetEncoded();
+        }
+
+        public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, byte[] foreignPubKey)
+        {
+            var foreign = (ECPublicKeyParameters)PublicKeyFactory.CreateKey(foreignPubKey);
+
+            var agreement = AgreementUtilities.GetBasicAgreement(KeyExchangeAlgorithm);
+            agreement.Init(clientPrivateKey);
+
+            var bytes = agreement.CalculateAgreement(foreign).ToByteArrayUnsigned();
+            return bytes;
+        }
 
         public Session(byte[] key, byte[] nonce)
         {

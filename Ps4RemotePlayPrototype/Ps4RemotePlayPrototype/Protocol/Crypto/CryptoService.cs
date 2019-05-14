@@ -1,4 +1,6 @@
 ﻿using System;
+using Org.BouncyCastle.Asn1.X9;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
 using Ps4RemotePlayPrototype.Util;
 
@@ -62,6 +64,25 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
             }
 
             return nonce;
+        }
+
+        public static AsymmetricCipherKeyPair GenerateEcdhKeyPair()
+        {
+            return Session.GenerateKeyPair(X9ObjectIdentifiers.Prime256v1);
+        }
+
+        public static Session GetSessionForEcdh(AsymmetricCipherKeyPair own, byte[] foreignPubKey)
+        {
+            var sharedSecret = Session.GenerateSharedSecret(own.Private, foreignPubKey);
+
+            var aesKey = new byte[16];
+            var nonce = new byte[16];
+
+            // TODO: Check if split of [16 bytes aes][16 bytes nonce] is correct
+            Array.Copy(sharedSecret, 0, aesKey, 0, aesKey.Length);
+            Array.Copy(sharedSecret, 16, nonce, 0, nonce.Length);
+
+            return new Session(aesKey, nonce);
         }
 
         public static Session GetSessionForPin(int pin)
