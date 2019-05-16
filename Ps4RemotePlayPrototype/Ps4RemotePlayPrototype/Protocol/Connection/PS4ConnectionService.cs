@@ -138,8 +138,8 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
 
                 Session session = CryptoService.GetSessionForControl(rpKeyBuffer, rpNonceDecoded);
 
-                string controlAesKey = CryptoService.GetSessionAesKeyForControl(rpKeyBuffer, rpNonceDecoded);
-                string controlNonce = CryptoService.GetSessionNonceValueForControl(rpNonceDecoded);
+                string controlAesKey = HexUtil.Hexlify(CryptoService.GetSessionAesKeyForControl(rpKeyBuffer, rpNonceDecoded));
+                string controlNonce = HexUtil.Hexlify(CryptoService.GetSessionNonceValueForControl(rpNonceDecoded));
                 OnPs4LogInfo?.Invoke(this, "!!! Control AES Key: " + controlAesKey);
                 OnPs4LogInfo?.Invoke(this, "!!! Control AES Nonce: " + controlNonce + Environment.NewLine);
 

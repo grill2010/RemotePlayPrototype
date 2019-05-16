@@ -1,19 +1,49 @@
 ﻿using System;
 using System.IO;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using Org.BouncyCastle.X509;
 using Ps4RemotePlayPrototype.Util;
 
 namespace Ps4RemotePlayPrototype.Protocol.Crypto
 {
     public class Session
     {
+        private const string KeyExchangeAlgorithm = "ECDH";
+
         private readonly byte[] _key;
         private readonly byte[] _nonce;
 
-        private int _inputCtr;
-        private int _outputCtr;
+        private ulong _inputCtr;
+        private ulong _outputCtr;
+
+        public static AsymmetricCipherKeyPair GenerateKeyPair(DerObjectIdentifier algorithm)
+        {
+            var gen = new ECKeyPairGenerator();
+            var genParams = new ECKeyGenerationParameters(algorithm, new SecureRandom());
+
+            gen.Init(genParams);
+            return gen.GenerateKeyPair();
+        }
+
+        public static byte[] GetPublicKeyBytesFromKeyPair(AsymmetricCipherKeyPair keyPair)
+        {
+            return SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public).GetEncoded();
+        }
+
+        public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, byte[] foreignPubKey)
+        {
+            var foreign = (ECPublicKeyParameters)PublicKeyFactory.CreateKey(foreignPubKey);
+
+            var agreement = AgreementUtilities.GetBasicAgreement(KeyExchangeAlgorithm);
+            agreement.Init(clientPrivateKey);
+
+            var bytes = agreement.CalculateAgreement(foreign).ToByteArrayUnsigned();
+            return bytes;
+        }
 
         public Session(byte[] key, byte[] nonce)
         {
@@ -29,63 +59,31 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
 
         public byte[] Encrypt(byte[] data)
         {
-            try
-            {
-                byte[] iv = GetIV(_outputCtr);
-                ++_outputCtr;
-                return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            byte[] iv = GetIV(_outputCtr);
+            ++_outputCtr;
+
+            return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
         }
 
-        public byte[] Encrypt(byte[] data, int ctr)
+        public byte[] Encrypt(byte[] data, ulong ctr)
         {
-            try
-            {
-                byte[] iv = this.GetIV(ctr);
-                return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            byte[] iv = this.GetIV(ctr);
+            return CreateAesCfbCipher(iv, doEncrypt: true).DoFinal(data);
         }
 
         public byte[] Decrypt(byte[] data)
         {
-            try
-            {
-                byte[] iv = GetIV(_inputCtr);
-                ++_inputCtr;
+            byte[] iv = GetIV(_inputCtr);
+            ++_inputCtr;
 
-                return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
         }
 
-        public byte[] Decrypt(byte[] data, int ctr)
+        public byte[] Decrypt(byte[] data, ulong ctr)
         {
-            try
-            {
-                byte[] iv = GetIV(ctr);
+            byte[] iv = GetIV(ctr);
 
-                return CreateAesCfbCipher(iv, doEncrypt: false)
-                    .DoFinal(data);
-            }
-            catch (Exception)
-            {
-                // Ignore
-            }
-            return new byte[0];
+            return CreateAesCfbCipher(iv, doEncrypt: false).DoFinal(data);
         }
 
         public byte[] GetNonceDerivative()
@@ -102,10 +100,10 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
         /*** private methods ***/
         /***********************/
 
-        private byte[] GetIV(int counter)
+        private byte[] GetIV(ulong counter)
         {
-            byte[] counterBuffer = ByteUtil.IntToByteArray(counter);
-            byte[] hmacInput = ByteUtil.ConcatenateArrays(this._nonce, new byte[4], counterBuffer);
+            byte[] counterBuffer = ByteUtil.ULongToByteArray(counter);
+            byte[] hmacInput = ByteUtil.ConcatenateArrays(this._nonce, counterBuffer);
 
             byte[] hash = MacUtilities.CalculateMac("HMAC-SHA256", new KeyParameter(CryptoService.HmacKey), hmacInput);
             // Only take 16 bytes of calculated HMAC
