@@ -52,6 +52,20 @@ namespace Ps4RemotePlayPrototype.Util
             return new byte[] { b0, b1, b2, b3 };
         }
 
+        public static byte[] ULongToByteArray(ulong value)
+        {
+            byte b0 = (byte)(value >> 56);
+            byte b1 = (byte)((value & 0x00FF000000000000) >> 48);
+            byte b2 = (byte)((value & 0x0000FF0000000000) >> 40);
+            byte b3 = (byte)((value & 0x000000FF00000000) >> 32);
+            byte b4 = (byte)((value & 0x00000000FF000000) >> 24);
+            byte b5 = (byte)((value & 0x0000000000FF0000) >> 16);
+            byte b6 = (byte)((value & 0x000000000000FF00) >> 8);
+            byte b7 = (byte)((value & 0x00000000000000FF));
+
+            return new byte[] { b0, b1, b2, b3, b4, b5, b6, b7 };
+        }
+
 
         /// <summary>
         /// Convert the int byte array to an int value.
