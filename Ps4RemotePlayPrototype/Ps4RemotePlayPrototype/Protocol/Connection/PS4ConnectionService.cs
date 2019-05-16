@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design.Serialization;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -8,7 +9,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Google.Protobuf;
 using Org.BouncyCastle.Utilities.Encoders;
+using Org.BouncyCastle.Utilities.IO;
+using ProtoBuf;
 using Ps4RemotePlayPrototype.Protocol.Crypto;
 using Ps4RemotePlayPrototype.Protocol.Message;
 using Ps4RemotePlayPrototype.Util;
@@ -117,7 +121,7 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
 
         /*********** control request ***********/
 
-        private async Task HandleControlRequest(string rpNonce, IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
+        private void HandleControlRequest(string rpNonce, IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
             bool connectedSuccess = false;
             Socket socket = null;
@@ -186,7 +190,7 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
                     connectedSuccess = true;
                     OnPs4LogInfo?.Invoke(this, "\"/sce/rp/session/ctrl\" response: " + Environment.NewLine + httpResponse.Trim() + Environment.NewLine);
                     OnPs4LogInfo?.Invoke(this, "TCP connection to PS4 established" + Environment.NewLine);
-                    await HandleOpenRemotePlayChannel(session, ps4Endpoint);
+                    HandleOpenRemotePlayChannel(session, ps4Endpoint);
                     OnPs4ConnectionSuccess?.Invoke(this, EventArgs.Empty);
                 }
             }
@@ -210,16 +214,14 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
          * This is currently really ugly and only dirty protoytpe code like
          * the whole project if you need to enhace it feel free to do it.
          */
-        public async Task HandleOpenRemotePlayChannel(Session session, IPEndPoint ps4Endpoint)
+        public void HandleOpenRemotePlayChannel(Session session, IPEndPoint ps4Endpoint)
         {
             const int retry = 5;
             Socket udpClient = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             udpClient.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             udpClient.ExclusiveAddressUse = false;
-            udpClient.ReceiveTimeout = 500;
+            udpClient.ReceiveTimeout = 5500;
             udpClient.Connect(ps4Endpoint.Address, RpRemotePlayPort);
-
-
 
             using (MemoryStream memoryStream = new MemoryStream())
             using (BinaryWriter binaryWriter = new BinaryWriter(memoryStream))
@@ -239,12 +241,12 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
                     {
                         udpClient.Send(controlData);
                     }
-                    catch (Exception e)
+                    catch (Exception exception)
                     {
-                        Console.WriteLine("Exception: " + e);
+                        Console.WriteLine("Exception occurred while sending udp packets: " + exception);
                     }
 
-                    controlResult = await controlResultFuture;
+                    controlResult = controlResultFuture.Result;
                     if (controlResult.WasSuccessful)
                     {
                         break;
@@ -259,9 +261,172 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
                 if (controlResult == null)
                     return;
 
-                ControlMessage answer = controlResult.ControlMessages[0];
+                ControlMessage answerPacket1 = controlResult.ControlMessages[0];
 
                 /*********** Packet 2 ***********/
+
+                byte[] unParsedPayload = answerPacket1.UnParsedPayload;
+                MemoryStream memoryBuffer = new MemoryStream(unParsedPayload);
+                memoryBuffer.Position = 8;
+                byte[] funcIncrBuffer = new byte[4];
+                memoryBuffer.Read(funcIncrBuffer, 0, funcIncrBuffer.Length);
+                int funcIncrValue = ByteUtil.ByteArrayToInt(funcIncrBuffer);
+
+                binaryWriter.Flush();
+                binaryWriter.Seek(0, SeekOrigin.Begin);
+                ControlMessage controlMessage2 = new ControlMessage((byte)0, answerPacket1.FuncIncr, 0, 0, (byte)10, (byte)0, 36, funcIncrValue, answerPacket1.ReceiverId);
+
+                memoryBuffer.Position = 28;
+                byte[] lastAnswerPart = new byte[memoryBuffer.Length - memoryBuffer.Position];
+                memoryBuffer.Read(lastAnswerPart, 0, lastAnswerPart.Length);
+                byte[] funcIncr = ByteUtil.IntToByteArray(answerPacket1.FuncIncr);
+                byte[] unknown = ByteUtil.IntToByteArray(102400);
+
+                byte[] unknownPayload2 = ByteUtil.ConcatenateArrays(funcIncr, unknown, funcIncr, lastAnswerPart);
+
+                controlMessage2.Serialize(binaryWriter);
+                data = memoryStream.ToArray();
+                controlData = ByteUtil.ConcatenateArrays(data, unknownPayload2);
+
+                controlResult = null;
+                for (int i = 1; i <= retry; i++)
+                {
+                    Task<ControlResult> controlResultFuture = WaitForControlMessage(udpClient, 1, "Packet2");
+
+                    try
+                    {
+                        udpClient.Send(controlData);
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+                    }
+
+                    controlResult = controlResultFuture.Result;
+                    if (controlResult.WasSuccessful)
+                    {
+                        break;
+                    }
+
+                    if (i == retry)
+                    {
+                        return;
+                    }
+                }
+
+                if (controlResult == null)
+                    return;
+
+                ControlMessage answerPacket2 = controlResult.ControlMessages[0];
+
+                /*************** Message 3 Big Payload *******/
+
+                int unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                string timestampUnix = unixTimestamp.ToString();
+                string sessionKey = timestampUnix + "FFDB2Q2CWNQO2RTR7WHNBZPVMXEEHT2TUQ3ETHG7LDVB3WNFDY3KVKDAX2LQTUNT";
+                //byte[] sessionKeyPart2 = new byte[64];
+                //new Random().NextBytes(sessionKeyPart2);
+                //byte[] sessionKeyBuffer = Encoding.ASCII.GetBytes(sessionKey);
+
+                byte[] handshakeKeyBuffer = new byte[16];
+                new Random().NextBytes(handshakeKeyBuffer);
+                byte[] handshakeKey = session.Encrypt(handshakeKeyBuffer);
+
+                string handshakeKeyValue = Convert.ToBase64String(handshakeKey);
+                string launchSpecValues ="{\"sessionId\":\"sessionId4321\",\"streamResolutions\":[{\"resolution\":{\"width\":1280,\"height\":720},\"maxFps\":60,\"score\":10}],\"network\":{\"bwKbpsSent\":10000,\"bwLoss\":0.001000,\"mtu\":1454,\"rtt\":5,\"ports\":[53,2053]},\"slotId\":1,\"appSpecification\":{\"minFps\":60,\"minBandwidth\":0,\"extTitleId\":\"ps3\",\"version\":1,\"timeLimit\":1,\"startTimeout\":100,\"afkTimeout\":100,\"afkTimeoutDisconnect\":100},\"konan\":{\"ps3AccessToken\":\"accessToken\",\"ps3RefreshToken\":\"refreshToken\"},\"requestGameSpecification\":{\"model\":\"bravia_tv\",\"platform\":\"android\",\"audioChannels\":\"5.1\",\"language\":\"sp\",\"acceptButton\":\"X\",\"connectedControllers\":[\"xinput\",\"ds3\",\"ds4\"],\"yuvCoefficient\":\"bt601\",\"videoEncoderProfile\":\"hw4.1\",\"audioEncoderProfile\":\"audio1\"},\"userProfile\":{\"onlineId\":\"psnId\",\"npId\":\"npId\",\"region\":\"US\",\"languagesUsed\":[\"en\",\"jp\"]},\"handshakeKey\":\"" + handshakeKeyValue +  "\"}\u0000";
+                byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecValues);
+                byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
+                cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
+                byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
+                for (int j = 0; j < launchSpecBuffer.Length; j++)
+                {
+                    newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
+                }
+
+                string encryptedLaunchSpecs = Convert.ToBase64String(newLaunchSpec);
+                byte[] encryptedKeyBuffer = { 0, 0, 0, 0 };
+
+                string ecdhPubKey = "04ba6a85f4a3b697e263bb7bde7da44c892790c30923d04ea7459fe254c7e31092878f0722b36c60eb0d0eef7adfbecd7167731c632d91056a0b903c7d3f0bef78";
+                byte[] ecdhPubKeyBuffer = HexUtil.Unhexlify(ecdhPubKey);
+
+                string ecdhSig = "5bad371cdc748528e9d83eab419dd04655942e564e8740a84c17d538d51fbc0d";
+                byte[] ecdhSigBuffer = HexUtil.Unhexlify(ecdhSig);
+
+                BigPayload bigPayload = new BigPayload
+                {
+                    clientVersion = 9,
+                    sessionKey = sessionKey,
+                    launchSpec = encryptedLaunchSpecs,
+                    encryptedKey = encryptedKeyBuffer,
+                    ecdhPubKey = ecdhPubKeyBuffer,
+                    ecdhSig = ecdhSigBuffer
+                };
+                TakionMessage takionMessage = new TakionMessage
+                {
+                    Type = TakionMessage.PayloadType.Big,
+                    bigPayload = bigPayload
+                };
+                
+
+                MemoryStream bigPayloadStream = new MemoryStream();
+                Serializer.Serialize(bigPayloadStream, takionMessage);
+                byte[] bytes = bigPayloadStream.ToArray();
+                binaryWriter.Flush();
+                binaryWriter.Seek(0, SeekOrigin.Begin);
+
+                ControlMessage controlMessage3 = new ControlMessage((byte)0, answerPacket1.FuncIncr, 0, 0, (byte)0, (byte)1, 1326, 18467, 65536);
+                controlMessage3.UnParsedPayload = ByteUtil.ConcatenateArrays(new byte[1], bytes); // I don't know why I have to add this empty 0 byte here but it seems otherwise there is some missing byte between the Control part and the Takion part
+                controlMessage3.Serialize(binaryWriter);
+
+                controlData = memoryStream.ToArray();
+
+                OnPs4LogInfo?.Invoke(this, Environment.NewLine + "Sending big payload:");
+                OnPs4LogInfo?.Invoke(this, "ECDH pubkey: " + HexUtil.Hexlify(bigPayload.ecdhPubKey));
+                OnPs4LogInfo?.Invoke(this, "ECDH sig: " + HexUtil.Hexlify(bigPayload.ecdhSig));
+                OnPs4LogInfo?.Invoke(this, "Session key: " + bigPayload.sessionKey + Environment.NewLine);
+
+                controlResult = null;
+                for (int i = 1; i <= retry; i++)
+                {
+                    Task<ControlResult> controlResultFuture = WaitForControlMessage(udpClient, 2, "Packet3");
+
+                    try
+                    {
+                        udpClient.Send(controlData);
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+                    }
+
+                    controlResult = controlResultFuture.Result;
+                    if (controlResult.WasSuccessful)
+                    {
+                        break;
+                    }
+
+                    if (i == retry)
+                    {
+                        return;
+                    }
+                }
+
+                if (controlResult == null)
+                    return;
+
+                ControlMessage answerPacket3 = controlResult.ControlMessages[0];
+                ControlMessage bangPayloadControl = controlResult.ControlMessages[1];
+
+                TakionMessage bangPayload = Serializer.Deserialize<TakionMessage>(new MemoryStream(bangPayloadControl.UnParsedPayload));
+
+                OnPs4LogInfo?.Invoke(this, Environment.NewLine + "Received bang payload:");
+                OnPs4LogInfo?.Invoke(this, "ECDH pubkey: " + HexUtil.Hexlify(bangPayload.bangPayload.ecdhPubKey));
+                OnPs4LogInfo?.Invoke(this, "ECDH sig: " + HexUtil.Hexlify(bangPayload.bangPayload.ecdhSig));
+                OnPs4LogInfo?.Invoke(this, "Session key: " + bangPayload.bangPayload.sessionKey);
+
+                /******************* StreamInfoPayload *******/
+
+                string test = "";
             }
 
         }
