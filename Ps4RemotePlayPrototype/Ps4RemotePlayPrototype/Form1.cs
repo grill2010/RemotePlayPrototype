@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Windows.Forms;
 using Ps4RemotePlayPrototype.Protocol.Connection;
 using Ps4RemotePlayPrototype.Protocol.Crypto;
@@ -6,6 +7,7 @@ using Ps4RemotePlayPrototype.Protocol.Discovery;
 using Ps4RemotePlayPrototype.Protocol.Model;
 using Ps4RemotePlayPrototype.Protocol.Registration;
 using Ps4RemotePlayPrototype.Setting;
+using Ps4RemotePlayPrototype.Util;
 
 namespace Ps4RemotePlayPrototype
 {
