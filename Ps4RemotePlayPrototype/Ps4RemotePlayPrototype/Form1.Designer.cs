@@ -40,6 +40,9 @@
             this.button2 = new System.Windows.Forms.Button();
             this.labelRegistryAesKey = new System.Windows.Forms.Label();
             this.labelRegistryAesKeyHeading = new System.Windows.Forms.Label();
+            this.textBoxPcapLogOutput = new System.Windows.Forms.TextBox();
+            this.button3 = new System.Windows.Forms.Button();
+            this.label5 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // textBoxRegisterInfo
@@ -137,34 +140,63 @@
             // 
             // labelRegistryAesKey
             // 
-            this.labelRegistryAesKey.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.labelRegistryAesKey.Location = new System.Drawing.Point(578, 146);
+            this.labelRegistryAesKey.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.labelRegistryAesKey.Location = new System.Drawing.Point(578, 140);
             this.labelRegistryAesKey.Name = "labelRegistryAesKey";
-            this.labelRegistryAesKey.Size = new System.Drawing.Size(244, 15);
+            this.labelRegistryAesKey.Size = new System.Drawing.Size(244, 36);
             this.labelRegistryAesKey.TabIndex = 10;
             this.labelRegistryAesKey.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // labelRegistryAesKeyHeading
             // 
-            this.labelRegistryAesKeyHeading.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            this.labelRegistryAesKeyHeading.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.labelRegistryAesKeyHeading.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelRegistryAesKeyHeading.Location = new System.Drawing.Point(575, 128);
+            this.labelRegistryAesKeyHeading.Location = new System.Drawing.Point(575, 122);
             this.labelRegistryAesKeyHeading.Name = "labelRegistryAesKeyHeading";
-            this.labelRegistryAesKeyHeading.Size = new System.Drawing.Size(247, 15);
+            this.labelRegistryAesKeyHeading.Size = new System.Drawing.Size(247, 18);
             this.labelRegistryAesKeyHeading.TabIndex = 11;
             this.labelRegistryAesKeyHeading.Text = "Used AES-Regist Key:";
             this.labelRegistryAesKeyHeading.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.labelRegistryAesKeyHeading.Visible = false;
             // 
+            // textBoxPcapLogOutput
+            // 
+            this.textBoxPcapLogOutput.Location = new System.Drawing.Point(15, 469);
+            this.textBoxPcapLogOutput.Multiline = true;
+            this.textBoxPcapLogOutput.Name = "textBoxPcapLogOutput";
+            this.textBoxPcapLogOutput.ReadOnly = true;
+            this.textBoxPcapLogOutput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.textBoxPcapLogOutput.Size = new System.Drawing.Size(560, 183);
+            this.textBoxPcapLogOutput.TabIndex = 12;
+            // 
+            // button3
+            // 
+            this.button3.Enabled = false;
+            this.button3.Location = new System.Drawing.Point(581, 629);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(244, 23);
+            this.button3.TabIndex = 13;
+            this.button3.Text = "Load Pcap file";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(12, 453);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(108, 13);
+            this.label5.TabIndex = 14;
+            this.label5.Text = "Log output from pcap";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(834, 450);
+            this.ClientSize = new System.Drawing.Size(834, 661);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.button3);
+            this.Controls.Add(this.textBoxPcapLogOutput);
             this.Controls.Add(this.labelRegistryAesKeyHeading);
             this.Controls.Add(this.labelRegistryAesKey);
             this.Controls.Add(this.button2);
@@ -201,6 +233,9 @@
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Label labelRegistryAesKey;
         private System.Windows.Forms.Label labelRegistryAesKeyHeading;
+        private System.Windows.Forms.TextBox textBoxPcapLogOutput;
+        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Label label5;
     }
 }
 
