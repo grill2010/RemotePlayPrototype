@@ -5,6 +5,8 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Windows.Forms;
+using Newtonsoft.Json;
+using ProtoBuf;
 using Ps4RemotePlayPrototype.Protocol.Connection;
 using Ps4RemotePlayPrototype.Protocol.Crypto;
 using Ps4RemotePlayPrototype.Protocol.Discovery;
@@ -222,8 +224,8 @@ namespace Ps4RemotePlayPrototype
                                        p.UdpDatagramHeader.DestinationPort == 9296).
                             ToArray();
 
-                        CheckForConnectionAesKey(tcpRemotePlayPackets);
-                        // CheckForBigBangPayload(udpRemotePlayPackets); Not yet working
+                        Session session = CheckForConnectionAesKey(tcpRemotePlayPackets);
+                        CheckForBigBangPayload(udpRemotePlayPackets, session);
                     }
                     catch (IOException)
                     {
@@ -324,7 +326,7 @@ namespace Ps4RemotePlayPrototype
         /***********************/
 
 
-        private void CheckForConnectionAesKey(IpPacket[] tcpRemotePlayPackets)
+        private Session CheckForConnectionAesKey(IpPacket[] tcpRemotePlayPackets)
         {
             int ipProtocolHeaderSize = 20;
             for (int i = 0; i < tcpRemotePlayPackets.Length; i++)
@@ -348,7 +350,7 @@ namespace Ps4RemotePlayPrototype
                             if (sessionResponse.PacketData.Array == null ||
                                 sessionResponse.PacketData.Array.Length < 1)
                             {
-                                return;
+                                return null;
                             }
 
                             length = sessionResponse.PacketData.Count - ipProtocolHeaderSize;
@@ -371,23 +373,25 @@ namespace Ps4RemotePlayPrototype
                                 string controlNonce = HexUtil.Hexlify(CryptoService.GetSessionNonceValueForControl(rpNonceDecoded));
                                 AppendLogOutputToPcapLogTextBox("!!! Control AES Key: " + controlAesKey);
                                 AppendLogOutputToPcapLogTextBox("!!! Control AES Nonce: " + controlNonce + Environment.NewLine);
+                                return CryptoService.GetSessionForControl(rpKeyBuffer, rpNonceDecoded);
                             }
                         }
                     }
                 }
             }
+
+            return null;
         }
 
-        private void CheckForBigBangPayload(UdpDatagram[] udpRemotePlayPackets)
+        private void CheckForBigBangPayload(UdpDatagram[] udpRemotePlayPackets, Session session)
         {
-            int ipProtocolHeaderSize = 20;
             foreach (var udpRemotePlayPacket in udpRemotePlayPackets)
             {
                 if (udpRemotePlayPacket.UdpData.Array != null && udpRemotePlayPacket.UdpData.Array.Length > 0)
                 {
-                    int length = udpRemotePlayPacket.UdpData.Count - ipProtocolHeaderSize;
+                    int length = udpRemotePlayPacket.UdpData.Count;
                     byte[] payload = new byte[length];
-                    Buffer.BlockCopy(udpRemotePlayPacket.UdpData.Array, udpRemotePlayPacket.UdpData.Offset + ipProtocolHeaderSize, payload, 0, payload.Length);
+                    Buffer.BlockCopy(udpRemotePlayPacket.UdpData.Array, udpRemotePlayPacket.UdpData.Offset, payload, 0, payload.Length);
 
                     if (payload[0] == 0) // Control Packet
                     {
@@ -399,7 +403,48 @@ namespace Ps4RemotePlayPrototype
                             controlMessage.Deserialize(binaryWriter);
                         }
 
-                        string sads = "";
+                        if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
+                        {
+                            TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
+
+                            if (takionMessage.bigPayload != null)
+                            {
+                                AppendLogOutputToPcapLogTextBox("!!! Big payload session key: " + takionMessage.bigPayload.sessionKey);
+                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhPubKey));
+                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhSig));
+                                if (session != null)
+                                {
+                                    byte[] launchSpecBuffer = Convert.FromBase64String(takionMessage.bigPayload.launchSpec);
+                                    byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
+                                    cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
+                                    byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
+                                    for (int j = 0; j < launchSpecBuffer.Length; j++)
+                                    {
+                                        newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
+                                    }
+
+                                    string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
+                                    dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
+                                    string handshakeKey = launchSpecJsonObject.handshakeKey;
+                                    if (handshakeKey != null)
+                                    {
+                                        byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
+                                        AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey));
+                                    }
+                                    AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine);
+                                }
+                                else
+                                {
+                                    AppendLogOutputToPcapLogTextBox(Environment.NewLine);
+                                }
+                            }
+                            else if (takionMessage.bangPayload != null)
+                            {
+                                AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey);
+                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey));
+                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig));
+                            }
+                        }
                     }
                 }
             }
