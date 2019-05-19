@@ -204,7 +204,8 @@ namespace Ps4RemotePlayPrototype
                     try
                     {
                         var packets = Pcap.ReadFile(file).TrySelect(record => PacketParser.Parse(new ArraySegment<byte>(record.Data.Skip(14).ToArray())));
-                        var tcpRemotePlayPackets = packets.
+                        var ipPackets = packets as IpPacket[] ?? packets.ToArray();
+                        var tcpRemotePlayPackets = ipPackets.
                             Where(p => p != null).
                             Where(p => p.ProtocolType == ProtocolType.Tcp).
                             Where(p =>
@@ -216,7 +217,7 @@ namespace Ps4RemotePlayPrototype
                             }).
                             ToArray();
 
-                        var udpRemotePlayPackets = packets.
+                        var udpRemotePlayPackets = ipPackets.
                             Where(p => p != null).
                             Where(p => p.ProtocolType == ProtocolType.Udp).
                             Select(p => p.ToUdpDatagram()).
