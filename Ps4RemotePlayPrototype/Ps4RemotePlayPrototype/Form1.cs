@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Windows.Forms;
 using Ps4RemotePlayPrototype.Protocol.Connection;
 using Ps4RemotePlayPrototype.Protocol.Crypto;
@@ -8,7 +7,6 @@ using Ps4RemotePlayPrototype.Protocol.Model;
 using Ps4RemotePlayPrototype.Protocol.Registration;
 using Ps4RemotePlayPrototype.Util;
 using Ps4RemotePlayPrototype.Setting;
-using Ps4RemotePlayPrototype.Util;
 
 namespace Ps4RemotePlayPrototype
 {
@@ -106,6 +104,11 @@ namespace Ps4RemotePlayPrototype
         private void OnPs4LogInfo(object sender, string logText)
         {
             this.textBoxLogOutput.Invoke(new MethodInvoker(() => AppendLogOutput(logText)));
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            this._ps4ConnectionService.Dispose();
         }
 
         /*******************/
