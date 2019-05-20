@@ -43,6 +43,10 @@
             this.textBoxPcapLogOutput = new System.Windows.Forms.TextBox();
             this.button3 = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
+            this.comboBoxNetworkAdapter = new System.Windows.Forms.ComboBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.button4 = new System.Windows.Forms.Button();
+            this.labelCapturingIndication = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // textBoxRegisterInfo
@@ -189,11 +193,55 @@
             this.label5.TabIndex = 14;
             this.label5.Text = "Log output from pcap";
             // 
+            // comboBoxNetworkAdapter
+            // 
+            this.comboBoxNetworkAdapter.FormattingEnabled = true;
+            this.comboBoxNetworkAdapter.Location = new System.Drawing.Point(582, 488);
+            this.comboBoxNetworkAdapter.Name = "comboBoxNetworkAdapter";
+            this.comboBoxNetworkAdapter.Size = new System.Drawing.Size(240, 21);
+            this.comboBoxNetworkAdapter.TabIndex = 15;
+            this.comboBoxNetworkAdapter.SelectedIndexChanged += new System.EventHandler(this.comboBoxNetworkAdapter_SelectedIndexChanged);
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(582, 469);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(86, 13);
+            this.label6.TabIndex = 16;
+            this.label6.Text = "Network adapter";
+            // 
+            // button4
+            // 
+            this.button4.Enabled = false;
+            this.button4.Location = new System.Drawing.Point(582, 515);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(244, 23);
+            this.button4.TabIndex = 17;
+            this.button4.Text = "Live Pcap parsing";
+            this.button4.UseVisualStyleBackColor = true;
+            this.button4.Click += new System.EventHandler(this.button4_Click);
+            // 
+            // labelCapturingIndication
+            // 
+            this.labelCapturingIndication.AutoSize = true;
+            this.labelCapturingIndication.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.labelCapturingIndication.Location = new System.Drawing.Point(651, 541);
+            this.labelCapturingIndication.Name = "labelCapturingIndication";
+            this.labelCapturingIndication.Size = new System.Drawing.Size(104, 13);
+            this.labelCapturingIndication.TabIndex = 18;
+            this.labelCapturingIndication.Text = "Capturing started";
+            this.labelCapturingIndication.Visible = false;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(834, 661);
+            this.Controls.Add(this.labelCapturingIndication);
+            this.Controls.Add(this.button4);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.comboBoxNetworkAdapter);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.button3);
             this.Controls.Add(this.textBoxPcapLogOutput);
@@ -236,6 +284,10 @@
         private System.Windows.Forms.TextBox textBoxPcapLogOutput;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.ComboBox comboBoxNetworkAdapter;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Label labelCapturingIndication;
     }
 }
 
