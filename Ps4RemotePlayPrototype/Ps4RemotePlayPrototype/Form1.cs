@@ -4,8 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using PcapDotNet.Core;
+using PcapDotNet.Packets;
+using PcapDotNet.Packets.Http;
+using PcapDotNet.Packets.IpV4;
+using PcapDotNet.Packets.Transport;
 using ProtoBuf;
 using Ps4RemotePlayPrototype.Protocol.Connection;
 using Ps4RemotePlayPrototype.Protocol.Crypto;
@@ -16,6 +22,7 @@ using Ps4RemotePlayPrototype.Protocol.Registration;
 using Ps4RemotePlayPrototype.Util;
 using Ps4RemotePlayPrototype.Setting;
 using Tx.Network;
+using UdpDatagram = Tx.Network.UdpDatagram;
 
 namespace Ps4RemotePlayPrototype
 {
@@ -26,6 +33,10 @@ namespace Ps4RemotePlayPrototype
         private readonly PS4DiscoveryService _ps4DiscoveryService;
         private readonly PS4ConnectionService _ps4ConnectionService;
 
+        private LivePcapContext _livePcapContext;
+
+        private readonly List<LivePacketDevice> networkAdapters = new List<LivePacketDevice>();
+
         public Form1()
         {
             InitializeComponent();
@@ -34,6 +45,7 @@ namespace Ps4RemotePlayPrototype
             _ps4RegistrationService = new PS4RegistrationService();
             _ps4DiscoveryService = new PS4DiscoveryService();
             _ps4ConnectionService = new PS4ConnectionService();
+            _livePcapContext = new LivePcapContext();
 
             _ps4RegistrationService.OnPs4RegisterSuccess += OnPs4RegisterSuccess;
             _ps4RegistrationService.OnPs4RegisterError += OnPs4RegisterError;
@@ -49,6 +61,11 @@ namespace Ps4RemotePlayPrototype
                 UpdateRegisterInfoTextBox(remotePlayData.RemotePlay.RegisterHeaderInfoComplete);
                 EnableConnectButton();
                 EnablePcapButton();
+                SetUpComboBoxNetworkAdapter();
+            }
+            else
+            {
+                MessageBox.Show("Please register firts with your PS4 in order to use all features", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -83,6 +100,7 @@ namespace Ps4RemotePlayPrototype
                 {
                     UpdateRegisterInfoTextBox(ps4RegisterModel.RegisterHeaderInfoComplete);
                     EnableConnectButton();
+                    EnablePcapButton();
                     MessageBox.Show("Successfully registered with PS4", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             }
@@ -90,6 +108,7 @@ namespace Ps4RemotePlayPrototype
             {
                 UpdateRegisterInfoTextBox(ps4RegisterModel.RegisterHeaderInfoComplete);
                 EnableConnectButton();
+                EnablePcapButton();
                 MessageBox.Show("Successfully registered with PS4", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -102,11 +121,12 @@ namespace Ps4RemotePlayPrototype
 
         private void OnPs4ConnectionSuccess(object sender, EventArgs eventArgs)
         {
-            this.button2.Invoke(new MethodInvoker(EnableConnectButton));
+            this.button2.Invoke(new MethodInvoker(DisableConnectButton));
         }
 
         private void OnPs4Disconnected(object sender, string errorMessage)
         {
+            this.button2.Invoke(new MethodInvoker(EnableConnectButton));
             MessageBox.Show(errorMessage, "Connection lost", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
@@ -183,8 +203,6 @@ namespace Ps4RemotePlayPrototype
                             MessageBox.Show("Could not connect to PS4. No register data is available.", "No PS4 Data", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
-
-                    this.button2.Invoke(new MethodInvoker(EnableConnectButton));
                 }
             });
         }
@@ -239,6 +257,64 @@ namespace Ps4RemotePlayPrototype
             }
         }
 
+        private void button4_Click(object sender, EventArgs e)
+        {
+            int selectedIndex = this.comboBoxNetworkAdapter.SelectedIndex;
+            if (selectedIndex >= 0 && selectedIndex <= (this.networkAdapters.Count - 1))
+            {
+                DisableLivePcapParsingButton();
+                DisablePcapButton();
+                labelCapturingIndication.Visible = true;
+                comboBoxNetworkAdapter.Enabled = false;
+                Task.Factory.StartNew(() =>
+                {
+                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+                    // 65536 guarantees that the whole packet will be captured on all the link layers
+                    using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+                    {
+                        using (BerkeleyPacketFilter filter = communicator.CreateFilter("tcp dst port 9295 or tcp src port 9295"))
+                        {
+                            // Set the filter
+                            communicator.SetFilter(filter);
+                        }
+
+                        // start the capture
+                        communicator.ReceivePackets(0, PacketHandlerTcp);
+                    }
+                });
+                Task.Factory.StartNew(() =>
+                {
+                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+
+                    // 65536 guarantees that the whole packet will be captured on all the link layers
+                    using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+                    {
+                        using (BerkeleyPacketFilter filter = communicator.CreateFilter("udp dst port 9296 or udp src port 9296"))
+                        {
+                            // Set the filter
+                            communicator.SetFilter(filter);
+                        }
+
+                        // start the capture
+                        communicator.ReceivePackets(0, PacketHandlerUdp);
+                    }
+                });
+            }
+        }
+
+        private void comboBoxNetworkAdapter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ComboBox comboBox = (ComboBox)sender;
+            if (comboBox.SelectedIndex >= 0)
+            {
+                EnableLivePcapParsingButton();
+            }
+            else
+            {
+                DisableLivePcapParsingButton();
+            }
+        }
+
         private void textBoxRpKey_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) &&
@@ -290,6 +366,11 @@ namespace Ps4RemotePlayPrototype
             this.button3.Enabled = true;
         }
 
+        private void DisablePcapButton()
+        {
+            this.button3.Enabled = false;
+        }
+
         private void EnableRegistryButton()
         {
             this.button1.Enabled = true;
@@ -298,6 +379,16 @@ namespace Ps4RemotePlayPrototype
         private void DisableRegistryButton()
         {
             this.button1.Enabled = false;
+        }
+
+        private void EnableLivePcapParsingButton()
+        {
+            this.button4.Enabled = true;
+        }
+
+        private void DisableLivePcapParsingButton()
+        {
+            this.button4.Enabled = false;
         }
 
         private void ClearLogOutput()
@@ -320,6 +411,27 @@ namespace Ps4RemotePlayPrototype
         {
             this.textBoxPcapLogOutput.Text += text;
             this.textBoxPcapLogOutput.Text += Environment.NewLine;
+        }
+
+        private void SetUpComboBoxNetworkAdapter()
+        {
+            this.comboBoxNetworkAdapter.Items.Clear();
+            this.comboBoxNetworkAdapter.DropDownStyle = ComboBoxStyle.DropDownList;
+            IList<LivePacketDevice> allDevices = LivePacketDevice.AllLocalMachine;
+            if (allDevices.Count == 0)
+            {
+                MessageBox.Show("No network adapter found. Could not use WinPcap for live capturing", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                networkAdapters.AddRange(allDevices);
+                foreach (var networkAdapter in networkAdapters)
+                {
+                    string description = networkAdapter.Description ?? networkAdapter.Name;
+                    this.comboBoxNetworkAdapter.Items.Add(description.Replace("Network adapter", ""));
+                }
+
+            }
         }
 
         /***********************/
@@ -363,7 +475,10 @@ namespace Ps4RemotePlayPrototype
                             {
                                 httpHeaders = ByteUtil.ByteArrayToHttpHeader(payload);
                                 httpHeaders.TryGetValue("RP-Nonce", out var rpNonce);
-
+                                if (rpNonce == null)
+                                {
+                                    return null;
+                                }
 
                                 byte[] rpKeyBuffer = HexUtil.Unhexlify(_settingManager.GetRemotePlayData().RemotePlay.RpKey);
                                 byte[] rpNonceDecoded = Convert.FromBase64String(rpNonce);
@@ -394,61 +509,152 @@ namespace Ps4RemotePlayPrototype
                     byte[] payload = new byte[length];
                     Buffer.BlockCopy(udpRemotePlayPacket.UdpData.Array, udpRemotePlayPacket.UdpData.Offset, payload, 0, payload.Length);
 
-                    if (payload[0] == 0) // Control Packet
+                    HandleControlMessage(payload, session);
+                }
+            }
+        }
+
+        private void HandleControlMessage(byte[] payload, Session session)
+        {
+            if (payload[0] == 0) // Control Packet
+            {
+                byte[] message = payload;
+                ControlMessage controlMessage = new ControlMessage();
+                using (MemoryStream memoryStream = new MemoryStream(message, 0, message.Length))
+                using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                {
+                    controlMessage.Deserialize(binaryWriter);
+                }
+
+                if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
+                {
+                    TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
+
+                    if (takionMessage.bigPayload != null)
                     {
-                        byte[] message = payload;
-                        ControlMessage controlMessage = new ControlMessage();
-                        using (MemoryStream memoryStream = new MemoryStream(message, 0, message.Length))
-                        using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload session key: " + takionMessage.bigPayload.sessionKey)));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhPubKey))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhSig))));
+                        if (session != null)
                         {
-                            controlMessage.Deserialize(binaryWriter);
-                        }
+                            byte[] launchSpecBuffer = Convert.FromBase64String(takionMessage.bigPayload.launchSpec);
+                            byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
+                            cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
+                            byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
+                            for (int j = 0; j < launchSpecBuffer.Length; j++)
+                            {
+                                newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
+                            }
 
-                        if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
+                            string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
+                            dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
+                            string handshakeKey = launchSpecJsonObject.handshakeKey;
+                            if (handshakeKey != null)
+                            {
+                                byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
+                                this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey))));
+                            }
+                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine)));
+                        }
+                        else
                         {
-                            TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
-
-                            if (takionMessage.bigPayload != null)
-                            {
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload session key: " + takionMessage.bigPayload.sessionKey);
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhPubKey));
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhSig));
-                                if (session != null)
-                                {
-                                    byte[] launchSpecBuffer = Convert.FromBase64String(takionMessage.bigPayload.launchSpec);
-                                    byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
-                                    cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
-                                    byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
-                                    for (int j = 0; j < launchSpecBuffer.Length; j++)
-                                    {
-                                        newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
-                                    }
-
-                                    string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
-                                    dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
-                                    string handshakeKey = launchSpecJsonObject.handshakeKey;
-                                    if (handshakeKey != null)
-                                    {
-                                        byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
-                                        AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey));
-                                    }
-                                    AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine);
-                                }
-                                else
-                                {
-                                    AppendLogOutputToPcapLogTextBox(Environment.NewLine);
-                                }
-                            }
-                            else if (takionMessage.bangPayload != null)
-                            {
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey);
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey));
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig));
-                            }
+                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox(Environment.NewLine)));
                         }
+                    }
+                    else if (takionMessage.bangPayload != null)
+                    {
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey)));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig))));
                     }
                 }
             }
         }
+
+        // Callback function invoked by Pcap.Net for ps4 tcp messages
+        private void PacketHandlerTcp(Packet packet)
+        {
+            IpV4Datagram ip = packet.Ethernet.IpV4;
+            IpV4Protocol protocol = ip.Protocol;
+            if (protocol == IpV4Protocol.Tcp)
+            {
+                TcpDatagram tcpDatagram = ip.Tcp;
+                HttpDatagram httpDatagram = tcpDatagram.Http;
+                if (httpDatagram.Length > 0 && httpDatagram.Header != null)
+                {
+                    string httpPacket = httpDatagram.Decode(Encoding.UTF8);
+                    if (httpPacket.StartsWith("GET /sce/rp/session HTTP/1.1\r\n"))
+                    {
+                        Dictionary<string, string> header = HttpUtils.SplitHttpResponse(httpPacket);
+                        header.TryGetValue("RP-Registkey", out var registKey);
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("RP-Registkey: " + registKey)));
+
+                        _livePcapContext.LivePcapState = LivePcapState.SESSION_REQUEST;
+                        _livePcapContext.Session = null;
+                    }
+                    else if (httpDatagram.IsResponse && httpPacket.StartsWith("HTTP/1.1 200 OK\r\n") && _livePcapContext.LivePcapState == LivePcapState.SESSION_REQUEST)
+                    {
+                        Dictionary<string, string> header = HttpUtils.SplitHttpResponse(httpPacket);
+                        header.TryGetValue("RP-Nonce", out var rpNonce);
+                        if (rpNonce == null)
+                        {
+                            return;
+                        }
+
+                        byte[] rpKeyBuffer = HexUtil.Unhexlify(_settingManager.GetRemotePlayData().RemotePlay.RpKey);
+                        byte[] rpNonceDecoded = Convert.FromBase64String(rpNonce);
+
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("RP-Nonce from \"/sce/rp/session\" response: " + HexUtil.Hexlify(rpNonceDecoded))));
+
+                        string controlAesKey = HexUtil.Hexlify(CryptoService.GetSessionAesKeyForControl(rpKeyBuffer, rpNonceDecoded));
+                        string controlNonce = HexUtil.Hexlify(CryptoService.GetSessionNonceValueForControl(rpNonceDecoded));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control AES Key: " + controlAesKey)));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control AES Nonce: " + controlNonce + Environment.NewLine)));
+                        _livePcapContext.LivePcapState = LivePcapState.SESSION_RESPONSE;
+                        _livePcapContext.Session = CryptoService.GetSessionForControl(rpKeyBuffer, rpNonceDecoded);
+                    }
+                }
+            }
+        }
+
+        // Callback function invoked by Pcap.Net for ps4 udp messages
+        private void PacketHandlerUdp(Packet packet)
+        {
+            IpV4Datagram ip = packet.Ethernet.IpV4;
+            IpV4Protocol protocol = ip.Protocol;
+            if (protocol == IpV4Protocol.Udp)
+            {
+                PcapDotNet.Packets.Transport.UdpDatagram udpDatagram = ip.Udp;
+                if (udpDatagram.Length > 0 && udpDatagram.Payload.Length > 0 && _livePcapContext.Session != null)
+                {
+                    byte[] payload = udpDatagram.Payload.ToMemoryStream().ToArray();
+
+                    HandleControlMessage(payload, _livePcapContext.Session);
+                }
+            }
+        }
+    }
+
+    /*********************/
+    /*** inner classes ***/
+    /*********************/
+
+    public class LivePcapContext
+    {
+        public LivePcapState LivePcapState { get; set; }
+        public Session Session { get; set; }
+
+        public LivePcapContext()
+        {
+            LivePcapState = LivePcapState.UNKNOWN;
+            Session = null;
+        }
+    }
+
+    public enum LivePcapState
+    {
+        SESSION_REQUEST,
+        SESSION_RESPONSE,
+        UNKNOWN
     }
 }
