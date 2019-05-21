@@ -282,6 +282,23 @@ namespace Ps4RemotePlayPrototype
                         communicator.ReceivePackets(0, PacketHandlerTcp);
                     }
                 });
+                Task.Factory.StartNew(() =>
+                {
+                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+
+                    // 65536 guarantees that the whole packet will be captured on all the link layers
+                    using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+                    {
+                        using (BerkeleyPacketFilter filter = communicator.CreateFilter("udp dst port 9296 or udp src port 9296"))
+                        {
+                            // Set the filter
+                            communicator.SetFilter(filter);
+                        }
+
+                        // start the capture
+                        communicator.ReceivePackets(0, PacketHandlerUdp);
+                    }
+                });
             }
         }
 
@@ -492,64 +509,69 @@ namespace Ps4RemotePlayPrototype
                     byte[] payload = new byte[length];
                     Buffer.BlockCopy(udpRemotePlayPacket.UdpData.Array, udpRemotePlayPacket.UdpData.Offset, payload, 0, payload.Length);
 
-                    if (payload[0] == 0) // Control Packet
+                    HandleControlMessage(payload, session);
+                }
+            }
+        }
+
+        private void HandleControlMessage(byte[] payload, Session session)
+        {
+            if (payload[0] == 0) // Control Packet
+            {
+                byte[] message = payload;
+                ControlMessage controlMessage = new ControlMessage();
+                using (MemoryStream memoryStream = new MemoryStream(message, 0, message.Length))
+                using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                {
+                    controlMessage.Deserialize(binaryWriter);
+                }
+
+                if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
+                {
+                    TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
+
+                    if (takionMessage.bigPayload != null)
                     {
-                        byte[] message = payload;
-                        ControlMessage controlMessage = new ControlMessage();
-                        using (MemoryStream memoryStream = new MemoryStream(message, 0, message.Length))
-                        using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload session key: " + takionMessage.bigPayload.sessionKey)));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhPubKey))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhSig))));
+                        if (session != null)
                         {
-                            controlMessage.Deserialize(binaryWriter);
-                        }
+                            byte[] launchSpecBuffer = Convert.FromBase64String(takionMessage.bigPayload.launchSpec);
+                            byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
+                            cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
+                            byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
+                            for (int j = 0; j < launchSpecBuffer.Length; j++)
+                            {
+                                newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
+                            }
 
-                        if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
+                            string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
+                            dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
+                            string handshakeKey = launchSpecJsonObject.handshakeKey;
+                            if (handshakeKey != null)
+                            {
+                                byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
+                                this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey))));
+                            }
+                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine)));
+                        }
+                        else
                         {
-                            TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
-
-                            if (takionMessage.bigPayload != null)
-                            {
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload session key: " + takionMessage.bigPayload.sessionKey);
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhPubKey));
-                                AppendLogOutputToPcapLogTextBox("!!! Big payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bigPayload.ecdhSig));
-                                if (session != null)
-                                {
-                                    byte[] launchSpecBuffer = Convert.FromBase64String(takionMessage.bigPayload.launchSpec);
-                                    byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
-                                    cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
-                                    byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];
-                                    for (int j = 0; j < launchSpecBuffer.Length; j++)
-                                    {
-                                        newLaunchSpec[j] = (byte)(launchSpecBuffer[j] ^ cryptoBuffer[j]);
-                                    }
-
-                                    string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
-                                    dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
-                                    string handshakeKey = launchSpecJsonObject.handshakeKey;
-                                    if (handshakeKey != null)
-                                    {
-                                        byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
-                                        AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey));
-                                    }
-                                    AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine);
-                                }
-                                else
-                                {
-                                    AppendLogOutputToPcapLogTextBox(Environment.NewLine);
-                                }
-                            }
-                            else if (takionMessage.bangPayload != null)
-                            {
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey);
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey));
-                                AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig));
-                            }
+                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox(Environment.NewLine)));
                         }
+                    }
+                    else if (takionMessage.bangPayload != null)
+                    {
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey)));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig))));
                     }
                 }
             }
         }
 
-        // Callback function invoked by Pcap.Net for every incoming packet
+        // Callback function invoked by Pcap.Net for ps4 tcp messages
         private void PacketHandlerTcp(Packet packet)
         {
             IpV4Datagram ip = packet.Ethernet.IpV4;
@@ -568,8 +590,9 @@ namespace Ps4RemotePlayPrototype
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("RP-Registkey: " + registKey)));
 
                         _livePcapContext.LivePcapState = LivePcapState.SESSION_REQUEST;
+                        _livePcapContext.Session = null;
                     }
-                    else if(httpDatagram.IsResponse && httpPacket.StartsWith("HTTP/1.1 200 OK\r\n") && _livePcapContext.LivePcapState == LivePcapState.SESSION_REQUEST)
+                    else if (httpDatagram.IsResponse && httpPacket.StartsWith("HTTP/1.1 200 OK\r\n") && _livePcapContext.LivePcapState == LivePcapState.SESSION_REQUEST)
                     {
                         Dictionary<string, string> header = HttpUtils.SplitHttpResponse(httpPacket);
                         header.TryGetValue("RP-Nonce", out var rpNonce);
@@ -582,7 +605,7 @@ namespace Ps4RemotePlayPrototype
                         byte[] rpNonceDecoded = Convert.FromBase64String(rpNonce);
 
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("RP-Nonce from \"/sce/rp/session\" response: " + HexUtil.Hexlify(rpNonceDecoded))));
-                        
+
                         string controlAesKey = HexUtil.Hexlify(CryptoService.GetSessionAesKeyForControl(rpKeyBuffer, rpNonceDecoded));
                         string controlNonce = HexUtil.Hexlify(CryptoService.GetSessionNonceValueForControl(rpNonceDecoded));
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control AES Key: " + controlAesKey)));
@@ -594,27 +617,44 @@ namespace Ps4RemotePlayPrototype
             }
         }
 
-        /*********************/
-        /*** inner classes ***/
-        /*********************/
-
-        public class LivePcapContext
+        // Callback function invoked by Pcap.Net for ps4 udp messages
+        private void PacketHandlerUdp(Packet packet)
         {
-            public LivePcapState LivePcapState { get; set; }
-            public Session Session { get; set; }
-
-            public LivePcapContext()
+            IpV4Datagram ip = packet.Ethernet.IpV4;
+            IpV4Protocol protocol = ip.Protocol;
+            if (protocol == IpV4Protocol.Udp)
             {
-                LivePcapState = LivePcapState.UNKNOWN;
-                Session = null;
+                PcapDotNet.Packets.Transport.UdpDatagram udpDatagram = ip.Udp;
+                if (udpDatagram.Length > 0 && udpDatagram.Payload.Length > 0 && _livePcapContext.Session != null)
+                {
+                    byte[] payload = udpDatagram.Payload.ToMemoryStream().ToArray();
+
+                    HandleControlMessage(payload, _livePcapContext.Session);
+                }
             }
         }
+    }
 
-        public enum LivePcapState
+    /*********************/
+    /*** inner classes ***/
+    /*********************/
+
+    public class LivePcapContext
+    {
+        public LivePcapState LivePcapState { get; set; }
+        public Session Session { get; set; }
+
+        public LivePcapContext()
         {
-            SESSION_REQUEST,
-            SESSION_RESPONSE,
-            UNKNOWN
+            LivePcapState = LivePcapState.UNKNOWN;
+            Session = null;
         }
+    }
+
+    public enum LivePcapState
+    {
+        SESSION_REQUEST,
+        SESSION_RESPONSE,
+        UNKNOWN
     }
 }
