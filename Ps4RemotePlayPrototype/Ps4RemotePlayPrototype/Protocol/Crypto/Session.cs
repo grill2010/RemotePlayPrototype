@@ -45,6 +45,16 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
             return bytes;
         }
 
+        public static byte[] CalculateHash(byte[] data)
+        {
+            return DigestUtilities.CalculateDigest("SHA256", data);
+        }
+
+        public static byte[] CalculateHMAC(byte[] key, byte[] data)
+        {
+            return MacUtilities.CalculateMac("HMAC-SHA256", new KeyParameter(key), data);
+        }
+
         public Session(byte[] key, byte[] nonce)
         {
             if (key.Length != 16)
@@ -105,7 +115,7 @@ namespace Ps4RemotePlayPrototype.Protocol.Crypto
             byte[] counterBuffer = ByteUtil.ULongToByteArray(counter);
             byte[] hmacInput = ByteUtil.ConcatenateArrays(this._nonce, counterBuffer);
 
-            byte[] hash = MacUtilities.CalculateMac("HMAC-SHA256", new KeyParameter(CryptoService.HmacKey), hmacInput);
+            byte[] hash = CalculateHMAC(CryptoService.HmacKey, hmacInput);
             // Only take 16 bytes of calculated HMAC
             Array.Resize(ref hash, 16);
             return hash;

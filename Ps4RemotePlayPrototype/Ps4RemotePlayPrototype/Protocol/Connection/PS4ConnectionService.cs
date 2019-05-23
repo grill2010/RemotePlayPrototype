@@ -358,16 +358,25 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
 
             /*************** Message 3 Big Payload *******/
 
+            // Setup ECDH session
+
+            // What does this encryptedKeyBuffer do?
+            byte[] encryptedKeyBuffer = { 0, 0, 0, 0 };
+
+            // Generate random handshake key, for ECDH pubkey signature calculation
+            byte[] handshakeKey = new byte[16];
+            new Random().NextBytes(handshakeKey);
+
+            // Generate ECDH keypair
+            var ecdhKeyPair = CryptoService.GenerateEcdhKeyPair();
+            // Get public key bytes
+            var ownPublicKey = Session.GetPublicKeyBytesFromKeyPair(ecdhKeyPair);
+            // Calculate ECDH pubkey signature
+            var ecdhSignature = Session.CalculateHMAC(handshakeKey, ownPublicKey);
+
             int unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             string timestampUnix = unixTimestamp.ToString();
             string sessionKey = timestampUnix + "FFDB2Q2CWNQO2RTR7WHNBZPVMXEEHT2TUQ3ETHG7LDVB3WNFDY3KVKDAX2LQTUNT";
-            //byte[] sessionKeyPart2 = new byte[64];
-            //new Random().NextBytes(sessionKeyPart2);
-            //byte[] sessionKeyBuffer = Encoding.ASCII.GetBytes(sessionKey);
-
-            byte[] handshakeKeyBuffer = new byte[16];
-            new Random().NextBytes(handshakeKeyBuffer);
-            byte[] handshakeKey = session.Encrypt(handshakeKeyBuffer);
 
             string handshakeKeyValue = Convert.ToBase64String(handshakeKey);
             string launchSpecValues = "{\"sessionId\":\"sessionId4321\",\"streamResolutions\":[{\"resolution\":{\"width\":1280,\"height\":720},\"maxFps\":60,\"score\":10}],\"network\":{\"bwKbpsSent\":10000,\"bwLoss\":0.001000,\"mtu\":1454,\"rtt\":5,\"ports\":[53,2053]},\"slotId\":1,\"appSpecification\":{\"minFps\":60,\"minBandwidth\":0,\"extTitleId\":\"ps3\",\"version\":1,\"timeLimit\":1,\"startTimeout\":100,\"afkTimeout\":100,\"afkTimeoutDisconnect\":100},\"konan\":{\"ps3AccessToken\":\"accessToken\",\"ps3RefreshToken\":\"refreshToken\"},\"requestGameSpecification\":{\"model\":\"bravia_tv\",\"platform\":\"android\",\"audioChannels\":\"5.1\",\"language\":\"sp\",\"acceptButton\":\"X\",\"connectedControllers\":[\"xinput\",\"ds3\",\"ds4\"],\"yuvCoefficient\":\"bt601\",\"videoEncoderProfile\":\"hw4.1\",\"audioEncoderProfile\":\"audio1\"},\"userProfile\":{\"onlineId\":\"psnId\",\"npId\":\"npId\",\"region\":\"US\",\"languagesUsed\":[\"en\",\"jp\"]},\"handshakeKey\":\"" + handshakeKeyValue + "\"}\u0000";
@@ -381,13 +390,6 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
             }
 
             string encryptedLaunchSpecs = Convert.ToBase64String(newLaunchSpec);
-            byte[] encryptedKeyBuffer = { 0, 0, 0, 0 };
-
-            string ecdhPubKey = "04ba6a85f4a3b697e263bb7bde7da44c892790c30923d04ea7459fe254c7e31092878f0722b36c60eb0d0eef7adfbecd7167731c632d91056a0b903c7d3f0bef78";
-            byte[] ecdhPubKeyBuffer = HexUtil.Unhexlify(ecdhPubKey);
-
-            string ecdhSig = "5bad371cdc748528e9d83eab419dd04655942e564e8740a84c17d538d51fbc0d";
-            byte[] ecdhSigBuffer = HexUtil.Unhexlify(ecdhSig);
 
             BigPayload bigPayload = new BigPayload
             {
@@ -395,15 +397,14 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
                 sessionKey = sessionKey,
                 launchSpec = encryptedLaunchSpecs,
                 encryptedKey = encryptedKeyBuffer,
-                ecdhPubKey = ecdhPubKeyBuffer,
-                ecdhSig = ecdhSigBuffer
+                ecdhPubKey = ownPublicKey,
+                ecdhSig = ecdhSignature
             };
             TakionMessage takionMessage = new TakionMessage
             {
                 Type = TakionMessage.PayloadType.Big,
                 bigPayload = bigPayload
             };
-
 
             MemoryStream bigPayloadStream = new MemoryStream();
             Serializer.Serialize(bigPayloadStream, takionMessage);
@@ -412,7 +413,9 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
             binaryWriter = new BinaryWriter(memoryStream);
 
             ControlMessage controlMessage3 = new ControlMessage((byte)0, answerPacket1.FuncIncr, 0, 0, (byte)0, (byte)1, 1326, 18467, 65536);
-            controlMessage3.UnParsedPayload = ByteUtil.ConcatenateArrays(new byte[1], bytes); // I don't know why I have to add this empty 0 byte here but it seems otherwise there is some missing byte between the Control part and the Takion part
+            // I don't know why I have to add this empty 0 byte here but it seems otherwise there is some missing byte between the Control part and the Takion part
+            // Maybe padding?
+            controlMessage3.UnParsedPayload = ByteUtil.ConcatenateArrays(new byte[1], bytes);
             controlMessage3.Serialize(binaryWriter);
 
             controlData = memoryStream.ToArray();
@@ -460,6 +463,10 @@ namespace Ps4RemotePlayPrototype.Protocol.Connection
             OnPs4LogInfo?.Invoke(this, "ECDH pubkey: " + HexUtil.Hexlify(bangPayload.bangPayload.ecdhPubKey));
             OnPs4LogInfo?.Invoke(this, "ECDH sig: " + HexUtil.Hexlify(bangPayload.bangPayload.ecdhSig));
             OnPs4LogInfo?.Invoke(this, "Session key: " + bangPayload.bangPayload.sessionKey);
+
+            /* Derive ECDH shared secret */
+            var sharedSecret = Session.GenerateSharedSecret(ecdhKeyPair.Private, bangPayload.bangPayload.ecdhPubKey);
+            OnPs4LogInfo?.Invoke(this, "SHARED SECRET: " + HexUtil.Hexlify(sharedSecret));
 
             /******************* StreamInfoPayload *******/
 

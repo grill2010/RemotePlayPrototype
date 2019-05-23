@@ -428,7 +428,9 @@ namespace Ps4RemotePlayPrototype
                 foreach (var networkAdapter in networkAdapters)
                 {
                     string description = networkAdapter.Description ?? networkAdapter.Name;
-                    this.comboBoxNetworkAdapter.Items.Add(description.Replace("Network adapter", ""));
+                    description = description.Replace("Network adapter", "");
+                    description += String.Format(" ({0})", networkAdapter.Addresses.Last().Address);
+                    this.comboBoxNetworkAdapter.Items.Add(description);
                 }
 
             }
@@ -553,6 +555,12 @@ namespace Ps4RemotePlayPrototype
                             {
                                 byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
                                 this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey))));
+                                var ecdhSignatureVerification = Session.CalculateHMAC(encodedHandshakeKey, takionMessage.bigPayload.ecdhPubKey);
+
+                                if (ecdhSignatureVerification.SequenceEqual(takionMessage.bigPayload.ecdhSig))
+                                    this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("ECDH Signature matches!")));
+                                else
+                                    this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!!! ECDH Signature mismatch")));
                             }
                             this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine)));
                         }
