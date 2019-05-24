@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.2050
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ps4RemotePlay", "Ps4RemotePlay\Ps4RemotePlay.csproj", "{6ACBEBB0-1D82-4AD2-9FD3-0A8DC519C0EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ps4RemotePlay", "Ps4RemotePlay\Ps4RemotePlay.csproj", "{6ACBEBB0-1D82-4AD2-9FD3-0A8DC519C0EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ps4RemotePlay.Ui", "Ps4RemotePlay.Ui\Ps4RemotePlay.Ui.csproj", "{016AA790-079B-41B2-AFFF-B0A087B8AAB5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ps4RemotePlay.Tests", "Ps4RemotePlay.Tests\Ps4RemotePlay.Tests.csproj", "{8358A69C-B419-4C3F-A2D6-81921DAC7CF7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{016AA790-079B-41B2-AFFF-B0A087B8AAB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8358A69C-B419-4C3F-A2D6-81921DAC7CF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8358A69C-B419-4C3F-A2D6-81921DAC7CF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8358A69C-B419-4C3F-A2D6-81921DAC7CF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8358A69C-B419-4C3F-A2D6-81921DAC7CF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

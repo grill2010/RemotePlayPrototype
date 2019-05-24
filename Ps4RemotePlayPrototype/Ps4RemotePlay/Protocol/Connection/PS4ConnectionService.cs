@@ -378,9 +378,10 @@ namespace Ps4RemotePlay.Protocol.Connection
             string timestampUnix = unixTimestamp.ToString();
             string sessionKey = timestampUnix + "FFDB2Q2CWNQO2RTR7WHNBZPVMXEEHT2TUQ3ETHG7LDVB3WNFDY3KVKDAX2LQTUNT";
 
-            string handshakeKeyValue = Convert.ToBase64String(handshakeKey);
-            string launchSpecValues = "{\"sessionId\":\"sessionId4321\",\"streamResolutions\":[{\"resolution\":{\"width\":1280,\"height\":720},\"maxFps\":60,\"score\":10}],\"network\":{\"bwKbpsSent\":10000,\"bwLoss\":0.001000,\"mtu\":1454,\"rtt\":5,\"ports\":[53,2053]},\"slotId\":1,\"appSpecification\":{\"minFps\":60,\"minBandwidth\":0,\"extTitleId\":\"ps3\",\"version\":1,\"timeLimit\":1,\"startTimeout\":100,\"afkTimeout\":100,\"afkTimeoutDisconnect\":100},\"konan\":{\"ps3AccessToken\":\"accessToken\",\"ps3RefreshToken\":\"refreshToken\"},\"requestGameSpecification\":{\"model\":\"bravia_tv\",\"platform\":\"android\",\"audioChannels\":\"5.1\",\"language\":\"sp\",\"acceptButton\":\"X\",\"connectedControllers\":[\"xinput\",\"ds3\",\"ds4\"],\"yuvCoefficient\":\"bt601\",\"videoEncoderProfile\":\"hw4.1\",\"audioEncoderProfile\":\"audio1\"},\"userProfile\":{\"onlineId\":\"psnId\",\"npId\":\"npId\",\"region\":\"US\",\"languagesUsed\":[\"en\",\"jp\"]},\"handshakeKey\":\"" + handshakeKeyValue + "\"}\u0000";
-            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecValues);
+            LaunchSpecification launchSpecs = LaunchSpecification.GetStandardSpecs("sessionId123", handshakeKey);
+
+            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecs.Serialize() + "\u0000");
+
             byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
             cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
             byte[] newLaunchSpec = new byte[launchSpecBuffer.Length];

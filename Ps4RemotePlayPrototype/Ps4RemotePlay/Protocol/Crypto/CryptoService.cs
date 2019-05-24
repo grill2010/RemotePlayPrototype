@@ -85,10 +85,16 @@ namespace Ps4RemotePlay.Protocol.Crypto
             return new Session(aesKey, nonce);
         }
 
-        public static Session GetSessionForPin(int pin)
+        public static Session GetSessionForPin(int pin, byte[] nonce = null)
         {
+            if (nonce != null && nonce.Length != 16)
+                throw new InvalidKeyException("Nonce of invalid length");
+
             var key = GetRegistryAesKeyForPin(pin);
-            var nonce = GetRandomNonce();
+
+            if (nonce == null)
+                nonce = GetRandomNonce();
+
             return new Session(key, nonce);
         }
 

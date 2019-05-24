@@ -33,9 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="PcapDotNet.Base, Version=1.0.4.25027, Culture=neutral, PublicKeyToken=06a20bc2fabb1931, processorArchitecture=MSIL">
       <HintPath>..\packages\Pcap.Net.x86.1.0.4.1\lib\net45\PcapDotNet.Base.dll</HintPath>
     </Reference>

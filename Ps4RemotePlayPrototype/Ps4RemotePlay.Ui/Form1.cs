@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Newtonsoft.Json;
 using PcapDotNet.Core;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.Http;
@@ -549,20 +548,20 @@ namespace Ps4RemotePlay.Ui
                             }
 
                             string launchSpecs = Encoding.UTF8.GetString(newLaunchSpec);
-                            dynamic launchSpecJsonObject = JsonConvert.DeserializeObject(launchSpecs);
-                            string handshakeKey = launchSpecJsonObject.handshakeKey;
+                            LaunchSpecification launchSpecJsonObject = LaunchSpecification.Deserialize(launchSpecs);
+                            byte[] handshakeKey = launchSpecJsonObject.HandshakeKey;
+
                             if (handshakeKey != null)
                             {
-                                byte[] encodedHandshakeKey = Convert.FromBase64String(handshakeKey);
-                                this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(encodedHandshakeKey))));
-                                var ecdhSignatureVerification = Session.CalculateHMAC(encodedHandshakeKey, takionMessage.bigPayload.ecdhPubKey);
+                                this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload handshake key in launchSpec in hex: " + HexUtil.Hexlify(handshakeKey))));
+                                var ecdhSignatureVerification = Session.CalculateHMAC(handshakeKey, takionMessage.bigPayload.ecdhPubKey);
 
                                 if (ecdhSignatureVerification.SequenceEqual(takionMessage.bigPayload.ecdhSig))
                                     this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("ECDH Signature matches!")));
                                 else
                                     this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!!! ECDH Signature mismatch")));
                             }
-                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.ToString() + Environment.NewLine)));
+                            this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Big payload full launchSpec: " + Environment.NewLine + launchSpecJsonObject.Serialize() + Environment.NewLine)));
                         }
                         else
                         {
