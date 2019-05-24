@@ -31,7 +31,7 @@ namespace Ps4RemotePlay.Protocol.Crypto
 
         public static byte[] GetPublicKeyBytesFromKeyPair(AsymmetricCipherKeyPair keyPair)
         {
-            return SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(keyPair.Public).GetEncoded();
+            return ((ECPublicKeyParameters)keyPair.Public).Q.GetEncoded();
         }
 
         public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, byte[] foreignPubKey)
