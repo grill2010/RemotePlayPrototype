@@ -19,8 +19,8 @@ using Ps4RemotePlay.Protocol.Discovery;
 using Ps4RemotePlay.Protocol.Message;
 using Ps4RemotePlay.Protocol.Model;
 using Ps4RemotePlay.Protocol.Registration;
+using Ps4RemotePlay.Setting;
 using Ps4RemotePlay.Util;
-using Ps4RemotePlay.Ui.Setting;
 using Tx.Network;
 using UdpDatagram = Tx.Network.UdpDatagram;
 
@@ -530,7 +530,7 @@ namespace Ps4RemotePlay.Ui
 
                 if (controlMessage.ProtoBuffFlag == 1 && controlMessage.PLoadSize > 100)
                 {
-                    TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
+                    TakionMessage takionMessage = ProtobufUtil.Deserialize<TakionMessage>(controlMessage.UnParsedPayload);
 
                     if (takionMessage.bigPayload != null)
                     {
