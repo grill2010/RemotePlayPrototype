@@ -33,8 +33,8 @@ namespace Ps4RemotePlay.Protocol.Registration
                     try
                     {
 
-                        IPEndPoint ps4EndPoint = FindConsole();
-                        if (ps4EndPoint == null)
+                        IPEndPoint ps4Endpoint = FindConsole();
+                        if (ps4Endpoint == null)
                         {
                             OnPs4RegisterError?.Invoke(this,
                                 "Could not connect to PS4. PS4 not found or not answering");
@@ -64,31 +64,27 @@ namespace Ps4RemotePlay.Protocol.Registration
                             finalPaddedPayload = ms.ToArray();
                         }
 
-                        IPEndPoint ipEndPoint = new IPEndPoint(ps4EndPoint.Address, RpControlPort);
-                        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                        var request = HttpWebRequest.CreateHttp($"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/regist");
+                        request.Method = "POST";
+                        request.Host = $"{ps4Endpoint.Address}";
+                        request.UserAgent = "remoteplay Windows";
+                        request.KeepAlive = false;
+                        request.Connection = "close";
+                        request.ContentLength = finalPaddedPayload.Length;
 
-                        socket.Connect(ipEndPoint);
+                        // Custom header fields
+                        request.GetRequestStream().Write(finalPaddedPayload, 0, finalPaddedPayload.Length);
 
-                        string requestData = "POST /sce/rp/regist HTTP/1.1\r\n" +
-                                             $"HOST: {ps4EndPoint.Address}\r\n" +
-                                             "User-Agent: remoteplay Windows\r\n" +
-                                             "Connection: close\r\n" +
-                                             $"Content-Length: {finalPaddedPayload.Length}\r\n" +
-                                             "\r\n";
-
-                        socket.Send(ByteUtil.ConcatenateArrays(Encoding.UTF8.GetBytes(requestData),
-                            finalPaddedPayload));
-
-                        byte[] receiveBuffer = new byte[8192];
-                        int readBytes = socket.Receive(receiveBuffer);
-                        byte[] response = new byte[readBytes];
-                        Buffer.BlockCopy(receiveBuffer, 0, response, 0, response.Length);
-                        string httpResponse = Encoding.ASCII.GetString(receiveBuffer, 0, readBytes);
-
-                        HttpStatusCode statusCode = HttpUtils.GetStatusCode(httpResponse);
-                        if (statusCode == HttpStatusCode.OK)
+                        using (var response = (HttpWebResponse)request.GetResponse())
                         {
-                            byte[] responseData = HttpUtils.GetBodyPayload(response);
+                            if (response.StatusCode != HttpStatusCode.OK)
+                            {
+                                OnPs4RegisterError?.Invoke(this, "sce/rp/regist was not successful, return code was: " + response.StatusCode);
+                            }
+
+                            byte[] responseData = new byte[response.ContentLength];
+                            var readBytes = response.GetResponseStream().Read(responseData, 0, responseData.Length);
+
                             byte[] decryptedData = session.Decrypt(responseData);
                             string registerHeaderInfoComplete = Encoding.UTF8.GetString(decryptedData);
                             Dictionary<string, string> httpHeaders = ByteUtil.ByteArrayToHttpHeader(decryptedData);
@@ -104,11 +100,6 @@ namespace Ps4RemotePlay.Protocol.Registration
 
                             OnPs4RegisterSuccess?.Invoke(this, new PS4RegisterModel(apSsid, apBssid, apKey, name, mac, registrationKey, nickname, rpKeyType, rpKey, registerHeaderInfoComplete));
                         }
-                        else
-                        {
-                            OnPs4RegisterError?.Invoke(this, "sce/rp/regist was not successful, return code was: " + statusCode);
-                        }
-
                     }
                     catch (Exception e)
                     {
