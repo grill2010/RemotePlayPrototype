@@ -23,7 +23,7 @@ namespace Ps4RemotePlay.Protocol.Message
     public class Network
     {
         public int BwKbpsSent { get; set; }
-        public float BwLoss { get; set; }
+        public Decimal BwLoss { get; set; }
         public int Mtu { get; set; }
         public int Rtt { get; set; }
         public List<int> Ports { get; set; }
@@ -85,7 +85,7 @@ namespace Ps4RemotePlay.Protocol.Message
 
         public string Serialize()
         {
-            return JsonConvert.SerializeObject(this, SerializerSettings);
+            return JsonConvert.SerializeObject(this, SerializerSettings) + "\u0000";
         }
 
         public static LaunchSpecification Deserialize(string json)
@@ -114,7 +114,7 @@ namespace Ps4RemotePlay.Protocol.Message
                 Network = new Network()
                 {
                     BwKbpsSent = 10000,
-                    BwLoss = 0.001000f,
+                    BwLoss = 0.001000M,
                     Mtu = 1454,
                     Rtt = 5,
                     Ports = new List<int>()

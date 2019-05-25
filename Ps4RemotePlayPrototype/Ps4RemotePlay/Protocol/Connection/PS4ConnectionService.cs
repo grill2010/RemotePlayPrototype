@@ -380,7 +380,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
             LaunchSpecification launchSpecs = LaunchSpecification.GetStandardSpecs("sessionId123", handshakeKey);
 
-            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecs.Serialize() + "\u0000");
+            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecs.Serialize());
 
             byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
             cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
