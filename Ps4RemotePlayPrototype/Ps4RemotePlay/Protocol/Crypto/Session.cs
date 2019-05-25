@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.X9;
+using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Math.EC;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Ps4RemotePlay.Util;
@@ -12,6 +15,7 @@ namespace Ps4RemotePlay.Protocol.Crypto
 {
     public class Session
     {
+        private static readonly DerObjectIdentifier ECCurveAlgo = SecObjectIdentifiers.SecP256k1;
         private const string KeyExchangeAlgorithm = "ECDH";
 
         private readonly byte[] _key;
@@ -20,10 +24,10 @@ namespace Ps4RemotePlay.Protocol.Crypto
         private ulong _inputCtr;
         private ulong _outputCtr;
 
-        public static AsymmetricCipherKeyPair GenerateKeyPair(DerObjectIdentifier algorithm)
+        public static AsymmetricCipherKeyPair GenerateKeyPair()
         {
             var gen = new ECKeyPairGenerator();
-            var genParams = new ECKeyGenerationParameters(algorithm, new SecureRandom());
+            var genParams = new ECKeyGenerationParameters(ECCurveAlgo, new SecureRandom());
 
             gen.Init(genParams);
             return gen.GenerateKeyPair();
@@ -34,14 +38,19 @@ namespace Ps4RemotePlay.Protocol.Crypto
             return ((ECPublicKeyParameters)keyPair.Public).Q.GetEncoded();
         }
 
-        public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, byte[] foreignPubKey)
+        public static ICipherParameters ConvertPubkeyBytesToCipherParams(byte[] pubKeyBytes)
         {
-            var foreign = (ECPublicKeyParameters)PublicKeyFactory.CreateKey(foreignPubKey);
+            X9ECParameters ecCurve = ECNamedCurveTable.GetByOid(ECCurveAlgo);
+            ECPoint point = ecCurve.Curve.DecodePoint(pubKeyBytes);
+            return new ECPublicKeyParameters(KeyExchangeAlgorithm, point, ECCurveAlgo);
+        }
 
+        public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, ICipherParameters foreignPublicKey)
+        {
             var agreement = AgreementUtilities.GetBasicAgreement(KeyExchangeAlgorithm);
             agreement.Init(clientPrivateKey);
 
-            var bytes = agreement.CalculateAgreement(foreign).ToByteArrayUnsigned();
+            var bytes = agreement.CalculateAgreement(foreignPublicKey).ToByteArrayUnsigned();
             return bytes;
         }
 

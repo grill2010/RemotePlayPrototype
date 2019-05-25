@@ -466,7 +466,8 @@ namespace Ps4RemotePlay.Protocol.Connection
             OnPs4LogInfo?.Invoke(this, "Session key: " + bangPayload.bangPayload.sessionKey);
 
             /* Derive ECDH shared secret */
-            var sharedSecret = Session.GenerateSharedSecret(ecdhKeyPair.Private, bangPayload.bangPayload.ecdhPubKey);
+            var foreignPubkeyParams = Session.ConvertPubkeyBytesToCipherParams(bangPayload.bangPayload.ecdhPubKey);
+            var sharedSecret = Session.GenerateSharedSecret(ecdhKeyPair.Private, foreignPubkeyParams);
             OnPs4LogInfo?.Invoke(this, "SHARED SECRET: " + HexUtil.Hexlify(sharedSecret));
 
             /******************* StreamInfoPayload *******/

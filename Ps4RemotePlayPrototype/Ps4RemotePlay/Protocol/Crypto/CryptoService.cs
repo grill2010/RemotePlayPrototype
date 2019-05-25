@@ -68,12 +68,13 @@ namespace Ps4RemotePlay.Protocol.Crypto
 
         public static AsymmetricCipherKeyPair GenerateEcdhKeyPair()
         {
-            return Session.GenerateKeyPair(X9ObjectIdentifiers.Prime256v1);
+            return Session.GenerateKeyPair();
         }
 
         public static Session GetSessionForEcdh(AsymmetricCipherKeyPair own, byte[] foreignPubKey)
         {
-            var sharedSecret = Session.GenerateSharedSecret(own.Private, foreignPubKey);
+            var foreignKeyParams = Session.ConvertPubkeyBytesToCipherParams(foreignPubKey);
+            var sharedSecret = Session.GenerateSharedSecret(own.Private, foreignKeyParams);
 
             var aesKey = new byte[16];
             var nonce = new byte[16];
