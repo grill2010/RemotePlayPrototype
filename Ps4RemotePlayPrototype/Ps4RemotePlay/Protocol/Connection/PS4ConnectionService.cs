@@ -316,7 +316,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
             LaunchSpecification launchSpecs = LaunchSpecification.GetStandardSpecs("sessionId123", handshakeKey);
 
-            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecs.Serialize() + "\u0000");
+            byte[] launchSpecBuffer = Encoding.UTF8.GetBytes(launchSpecs.Serialize());
 
             byte[] cryptoBuffer = new byte[launchSpecBuffer.Length];
             cryptoBuffer = session.Encrypt(cryptoBuffer, 0);
@@ -402,7 +402,8 @@ namespace Ps4RemotePlay.Protocol.Connection
             OnPs4LogInfo?.Invoke(this, "Session key: " + bangPayload.bangPayload.sessionKey);
 
             /* Derive ECDH shared secret */
-            var sharedSecret = Session.GenerateSharedSecret(ecdhKeyPair.Private, bangPayload.bangPayload.ecdhPubKey);
+            var foreignPubkeyParams = Session.ConvertPubkeyBytesToCipherParams(bangPayload.bangPayload.ecdhPubKey);
+            var sharedSecret = Session.GenerateSharedSecret(ecdhKeyPair.Private, foreignPubkeyParams);
             OnPs4LogInfo?.Invoke(this, "SHARED SECRET: " + HexUtil.Hexlify(sharedSecret));
 
             /******************* StreamInfoPayload *******/
