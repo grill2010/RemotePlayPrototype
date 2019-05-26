@@ -11,7 +11,6 @@ using PcapDotNet.Packets;
 using PcapDotNet.Packets.Http;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.Transport;
-using Ps4RemotePlay;
 using Ps4RemotePlay.Protocol.Connection;
 using Ps4RemotePlay.Protocol.Crypto;
 using Ps4RemotePlay.Protocol.Discovery;

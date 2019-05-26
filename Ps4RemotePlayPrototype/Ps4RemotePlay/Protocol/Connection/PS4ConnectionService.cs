@@ -265,9 +265,6 @@ namespace Ps4RemotePlay.Protocol.Connection
             udpClient.ExclusiveAddressUse = false;
             udpClient.ReceiveTimeout = 5500;
             udpClient.Connect(ps4Endpoint.Address, RpRemotePlayPort);
-            //UdpState stateObject = new UdpState { udpClient = udpClient };
-
-
 
             MemoryStream memoryStream = new MemoryStream();
             BinaryWriter binaryWriter = new BinaryWriter(memoryStream);
