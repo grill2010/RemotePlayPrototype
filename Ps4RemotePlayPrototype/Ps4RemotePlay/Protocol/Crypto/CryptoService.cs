@@ -1,5 +1,6 @@
 ﻿using System;
-using Org.BouncyCastle.Asn1.X9;
+using System.Security.Cryptography;
+using System.Text;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
 using Ps4RemotePlay.Util;
@@ -13,6 +14,23 @@ namespace Ps4RemotePlay.Protocol.Crypto
         public static readonly byte[] RegNonceKey = HexUtil.Unhexlify("E1EC9C3ADDBD0885FC0E1D789032C004");
         public static readonly byte[] AuthAesKey = RegNonceKey;
         public static readonly byte[] AuthNonceKey = HexUtil.Unhexlify("0149879B65398B394B3A8D48C30AEF51");
+
+        public static string GetUniqueKey(int size)
+        {
+            char[] chars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".ToCharArray();
+            byte[] data = new byte[size];
+            using (RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider())
+            {
+                crypto.GetBytes(data);
+            }
+            StringBuilder result = new StringBuilder(size);
+            foreach (byte b in data)
+            {
+                result.Append(chars[b % (chars.Length)]);
+            }
+            return result.ToString();
+        }
 
         public static byte[] GetRandomNonce()
         {

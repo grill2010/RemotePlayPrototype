@@ -376,7 +376,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
             int unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             string timestampUnix = unixTimestamp.ToString();
-            string sessionKey = timestampUnix + "FFDB2Q2CWNQO2RTR7WHNBZPVMXEEHT2TUQ3ETHG7LDVB3WNFDY3KVKDAX2LQTUNT";
+            string sessionKey = timestampUnix + CryptoService.GetUniqueKey(64);
 
             LaunchSpecification launchSpecs = LaunchSpecification.GetStandardSpecs("sessionId123", handshakeKey);
 
@@ -509,8 +509,127 @@ namespace Ps4RemotePlay.Protocol.Connection
             if (controlResult == null)
                 return;
 
-            ControlMessage streamInfoControl = controlResult.ControlMessages[0];
-            TakionMessage streamInfoPayload = Serializer.Deserialize<TakionMessage>(new MemoryStream(streamInfoControl.UnParsedPayload));
+            ControlMessage resolutionInfoControl = controlResult.ControlMessages[0];
+            TakionMessage resolutionPayload = Serializer.Deserialize<TakionMessage>(new MemoryStream(resolutionInfoControl.UnParsedPayload));
+
+            memoryStream = new MemoryStream();
+            binaryWriter = new BinaryWriter(memoryStream);
+            ControlMessage controlMessage5 = new ControlMessage((byte)0, bangPayloadControl.FuncIncr, new Random().Next(), 0, (byte)3, (byte)0, 16, resolutionInfoControl.FuncIncr, 102400);
+            controlMessage5.UnParsedPayload = HexUtil.Unhexlify("00000000");
+            controlMessage5.Serialize(binaryWriter);
+
+            controlData = memoryStream.ToArray();
+
+            try
+            {
+                udpClient.Send(controlData);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+            }
+
+
+            memoryStream = new MemoryStream();
+            binaryWriter = new BinaryWriter(memoryStream);
+            ControlMessage controlMessage6 = new ControlMessage((byte)0, bangPayloadControl.FuncIncr, new Random().Next(), 16, (byte)0, (byte)1, 33, resolutionInfoControl.ReceiverId + 1, 589824);
+            TakionMessage streamInfoPayload = new TakionMessage()
+            {
+                streamInfoPayload = new StreamInfoPayload()
+                {
+                    audioHeader = HexUtil.Unhexlify("120e01100000bb80000001e000000001")
+                }
+            };
+
+            MemoryStream streamInfoPayloadStream = new MemoryStream();
+            Serializer.Serialize(streamInfoPayloadStream, streamInfoPayload);
+            bytes = streamInfoPayloadStream.ToArray();
+
+            controlMessage6.UnParsedPayload = ByteUtil.ConcatenateArrays(new byte[1], bytes);
+            controlMessage6.Serialize(binaryWriter);
+
+            controlData = memoryStream.ToArray();
+
+            try
+            {
+                udpClient.Send(controlData);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+            }
+
+            memoryStream = new MemoryStream();
+            binaryWriter = new BinaryWriter(memoryStream);
+            ControlMessage controlMessage7 = new ControlMessage((byte)0, bangPayloadControl.FuncIncr, new Random().Next(), 32, (byte)0, (byte)1, 15, resolutionInfoControl.ReceiverId + 2, 589824);
+            byte[] streamInfoAck = HexUtil.Unhexlify("00080e");
+            controlMessage7.UnParsedPayload = streamInfoAck;
+
+            controlMessage7.Serialize(binaryWriter);
+
+            controlData = memoryStream.ToArray();
+
+            controlResult = null;
+            for (int i = 1; i <= retry; i++)
+            {
+                Task<ControlResult> controlResultFuture = WaitForControlMessage(udpClient, 3, "Packet 5");
+
+                try
+                {
+                    udpClient.Send(controlData);
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+                }
+
+                controlResult = controlResultFuture.Result;
+                if (controlResult.WasSuccessful)
+                {
+                    break;
+                }
+
+                if (i == retry)
+                {
+                    return;
+                }
+            }
+
+            if (controlResult == null)
+                return;
+
+            for (int i = 0; i < 3; i++)
+            {
+                foreach (var currentControlMessage in controlResult.ControlMessages)
+                {
+                    Random rand = new Random();
+                    //controlMessage6.ReceiverId
+                    if (currentControlMessage.Flag1 == 0)
+                    {
+                        memoryStream = new MemoryStream();
+                        binaryWriter = new BinaryWriter(memoryStream);
+                        ControlMessage controlMessageAnswer = new ControlMessage((byte)0, controlMessage6.ReceiverId, rand.Next(), currentControlMessage.TagPos, (byte)3, (byte)0, 16, currentControlMessage.FuncIncr, 102400);
+                        byte[] payload = HexUtil.Unhexlify("00000000");
+                        controlMessageAnswer.UnParsedPayload = payload;
+
+                        controlMessageAnswer.Serialize(binaryWriter);
+
+                        controlData = memoryStream.ToArray();
+
+                        try
+                        {
+                            udpClient.Send(controlData);
+                        }
+                        catch (Exception exception)
+                        {
+                            Console.WriteLine("Exception occurred while sending udp packets: " + exception);
+                        }
+                    }
+                }
+            }
+            
+
+            OnPs4LogInfo?.Invoke(this, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         }
 
         private async Task<ControlResult> WaitForControlMessage(Socket socket, int expectedPackets, string info)
@@ -525,13 +644,21 @@ namespace Ps4RemotePlay.Protocol.Connection
                         byte[] message = new byte[MaxUdpPacketSize];
                         int received = socket.Receive(message);
 
-                        ControlMessage controlMessage = new ControlMessage();
-                        using (MemoryStream memoryStream = new MemoryStream(message, 0, received))
-                        using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                        if (received > 0 && message[0] == 0)
                         {
-                            controlMessage.Deserialize(binaryWriter);
-                            controlMessages.Add(controlMessage);
-                            OnPs4LogInfo?.Invoke(this, "Received: " + info + "_" + i);
+                            ControlMessage controlMessage = new ControlMessage();
+                            using (MemoryStream memoryStream = new MemoryStream(message, 0, received))
+                            using (BinaryReader binaryWriter = new BinaryReader(memoryStream))
+                            {
+                                controlMessage.Deserialize(binaryWriter);
+                                controlMessages.Add(controlMessage);
+                                OnPs4LogInfo?.Invoke(this, "Received: " + info + "_" + i);
+                            }
+                        }
+                        else
+                        {
+                            // ToDo check time
+                            --i;
                         }
                     }
                     return new ControlResult(true, controlMessages);
