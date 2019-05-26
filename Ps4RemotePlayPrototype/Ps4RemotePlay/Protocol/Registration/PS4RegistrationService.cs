@@ -111,7 +111,7 @@ namespace Ps4RemotePlay.Protocol.Registration
             });
         }
 
-        private IPEndPoint FindConsole()
+        private static IPEndPoint FindConsole()
         {
             try
             {

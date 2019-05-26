@@ -30,7 +30,6 @@ namespace Ps4RemotePlay.Ui
         private readonly SettingManager _settingManager;
         private readonly PS4RegistrationService _ps4RegistrationService;
         private readonly PS4DiscoveryService _ps4DiscoveryService;
-        private readonly PS4ConnectionService _ps4ConnectionService;
 
         private LivePcapContext _livePcapContext;
 
@@ -43,16 +42,10 @@ namespace Ps4RemotePlay.Ui
             _settingManager = SettingManager.GetInstance();
             _ps4RegistrationService = new PS4RegistrationService();
             _ps4DiscoveryService = new PS4DiscoveryService();
-            _ps4ConnectionService = new PS4ConnectionService();
             _livePcapContext = new LivePcapContext();
 
             _ps4RegistrationService.OnPs4RegisterSuccess += OnPs4RegisterSuccess;
             _ps4RegistrationService.OnPs4RegisterError += OnPs4RegisterError;
-
-            _ps4ConnectionService.OnPs4ConnectionSuccess += OnPs4ConnectionSuccess;
-            _ps4ConnectionService.OnPs4Disconnected += OnPs4Disconnected;
-            _ps4ConnectionService.OnPs4ConnectionError += OnPs4ConnectionError;
-            _ps4ConnectionService.OnPs4LogInfo += OnPs4LogInfo;
 
             PS4RemotePlayData remotePlayData = _settingManager.GetRemotePlayData();
             if (remotePlayData != null)
@@ -142,14 +135,13 @@ namespace Ps4RemotePlay.Ui
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            this._ps4ConnectionService.Dispose();
         }
 
         /*******************/
         /*** gui methods ***/
         /*******************/
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
             DisableRegistryButton();
             string psnId = textBoxPsnId.Text;
@@ -159,7 +151,7 @@ namespace Ps4RemotePlay.Ui
             {
                 if (pin.Length == 8 && int.TryParse(pin, out var parsedPin))
                 {
-                    _ps4RegistrationService.PairConsole(psnId, parsedPin).GetAwaiter().GetResult();
+                    await _ps4RegistrationService.PairConsole(psnId, parsedPin);
                 }
                 else
                 {
@@ -176,7 +168,7 @@ namespace Ps4RemotePlay.Ui
         {
             DisableConnectButton();
             ClearLogOutput();
-            _ps4DiscoveryService.DiscoverConsole(pS4DiscoveryInfo =>
+            _ps4DiscoveryService.DiscoverConsole(async (pS4DiscoveryInfo) =>
             {
                 if (pS4DiscoveryInfo == null)
                 {
@@ -195,8 +187,18 @@ namespace Ps4RemotePlay.Ui
                         PS4RemotePlayData remotePlayData = _settingManager.GetRemotePlayData();
                         if (remotePlayData != null)
                         {
-                            _ps4ConnectionService.ConnectToPS4(pS4DiscoveryInfo.Ps4EndPoint, remotePlayData)
-                                .GetAwaiter().GetResult();
+                            var connectionService = new PS4ConnectionService(pS4DiscoveryInfo.Ps4EndPoint);
+                            connectionService.OnPs4ConnectionSuccess += OnPs4ConnectionSuccess;
+                            connectionService.OnPs4Disconnected += OnPs4Disconnected;
+                            connectionService.OnPs4ConnectionError += OnPs4ConnectionError;
+                            connectionService.OnPs4LogInfo += OnPs4LogInfo;
+
+                            await connectionService.ConnectToPS4(pS4DiscoveryInfo.Ps4EndPoint, remotePlayData);
+
+                            connectionService.OnPs4ConnectionSuccess -= OnPs4ConnectionSuccess;
+                            connectionService.OnPs4Disconnected -= OnPs4Disconnected;
+                            connectionService.OnPs4ConnectionError -= OnPs4ConnectionError;
+                            connectionService.OnPs4LogInfo -= OnPs4LogInfo;
                         }
                         else
                         {

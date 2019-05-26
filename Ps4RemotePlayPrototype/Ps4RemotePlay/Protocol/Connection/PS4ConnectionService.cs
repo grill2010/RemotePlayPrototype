@@ -34,6 +34,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         public EventHandler<string> OnPs4LogInfo;
 
+        private IPEndPoint _consoleEp;
         private HttpClient _httpClient;
         private Session _currentSession;
 
@@ -47,9 +48,13 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         private readonly object _lockObject = new object();
 
-        public PS4ConnectionService()
+        public PS4ConnectionService(IPEndPoint consoleEp)
         {
-            _httpClient = new HttpClient();
+            _consoleEp = consoleEp;
+            _httpClient = new HttpClient()
+            {
+                BaseAddress = new Uri($"http://{_consoleEp.Address}:{RpControlPort}/")
+            };
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("remoteplay Windows");
         }
 
@@ -85,8 +90,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         private async Task HandleSessionRequest(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get,
-                $"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session");
+            var request = new HttpRequestMessage(HttpMethod.Get, "sce/rp/session");
 
             request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
             request.Headers.ConnectionClose = true;
@@ -146,8 +150,7 @@ namespace Ps4RemotePlay.Protocol.Connection
             byte[] encryptedOsType = session.Encrypt(ByteUtil.ConcatenateArrays(osTypeBuffer, osTypePadding));
             string encodedOsType = Convert.ToBase64String(encryptedOsType);
 
-            var request = new HttpRequestMessage(HttpMethod.Get,
-                $"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session/ctrl");
+            var request = new HttpRequestMessage(HttpMethod.Get, "sce/rp/session/ctrl");
 
             request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
             request.Headers.ConnectionClose = false;
