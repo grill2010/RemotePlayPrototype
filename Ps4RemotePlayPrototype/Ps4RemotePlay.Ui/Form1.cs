@@ -408,8 +408,8 @@ namespace Ps4RemotePlay.Ui
 
         private void AppendLogOutputToPcapLogTextBox(string text)
         {
-            this.textBoxPcapLogOutput.Text += text;
-            this.textBoxPcapLogOutput.Text += Environment.NewLine;
+            this.textBoxPcapLogOutput.AppendText(text);
+            this.textBoxPcapLogOutput.AppendText(Environment.NewLine);
         }
 
         private void SetUpComboBoxNetworkAdapter()
@@ -428,7 +428,7 @@ namespace Ps4RemotePlay.Ui
                 {
                     string description = networkAdapter.Description ?? networkAdapter.Name;
                     description = description.Replace("Network adapter", "");
-                    description += String.Format(" ({0})", networkAdapter.Addresses.Last().Address);
+                    description += $" ({networkAdapter.Addresses.Last().Address})";
                     this.comboBoxNetworkAdapter.Items.Add(description);
                 }
 
@@ -572,7 +572,14 @@ namespace Ps4RemotePlay.Ui
                     {
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey)));
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey))));
-                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig) + Environment.NewLine)));
+                    }
+                }
+                else
+                {
+                    if (controlMessage.Crypto != 0)
+                    {
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypoto value: " + HexUtil.Hexlify(ByteUtil.IntToByteArray(controlMessage.Crypto)))));
                     }
                 }
             }
