@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,91 +21,92 @@ namespace Ps4RemotePlay.Protocol.Registration
 
         private readonly object _lockObject = new object();
 
+        private HttpClient _httpClient;
+
         public const int RpControlPort = 9295;
 
         private const int MaxUdpDatagramSize = 65000;
 
-        public void PairConsole(string psnId, int pin)
+        public PS4RegistrationService()
         {
-            Task.Factory.StartNew(() =>
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("remoteplay Windows");
+        }
+
+        public async Task PairConsole(string psnId, int pin)
+        {
+            await Task.Factory.StartNew(async () =>
             {
-                lock (_lockObject)
+                try
                 {
-                    try
+
+                    IPEndPoint ps4Endpoint = FindConsole();
+                    if (ps4Endpoint == null)
                     {
-
-                        IPEndPoint ps4Endpoint = FindConsole();
-                        if (ps4Endpoint == null)
-                        {
-                            OnPs4RegisterError?.Invoke(this,
-                                "Could not connect to PS4. PS4 not found or not answering");
-                            return;
-                        }
-
-                        Session session = CryptoService.GetSessionForPin(pin);
-
-                        Dictionary<string, string> registrationHeaders = new Dictionary<string, string>();
-                        registrationHeaders.Add("Client-Type", "Windows");
-                        registrationHeaders.Add("Np-Online-Id", psnId);
-                        byte[] payload = session.Encrypt(ByteUtil.HttpHeadersToByteArray(registrationHeaders));
-
-                        SecureRandom random = new SecureRandom();
-                        byte[] buffer = new byte[480];
-                        random.NextBytes(buffer);
-
-                        byte[] paddedPayload = ByteUtil.ConcatenateArrays(buffer, payload);
-                        byte[] nonceDerivative = session.GetNonceDerivative();
-                        byte[] finalPaddedPayload;
-                        using (var ms = new MemoryStream())
-                        {
-                            ms.SetLength(paddedPayload.Length);
-                            ms.Write(paddedPayload, 0, paddedPayload.Length);
-                            ms.Seek(284, SeekOrigin.Begin);
-                            ms.Write(nonceDerivative, 0, nonceDerivative.Length);
-                            finalPaddedPayload = ms.ToArray();
-                        }
-
-                        var request = HttpWebRequest.CreateHttp($"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/regist");
-                        request.Method = "POST";
-                        request.Host = $"{ps4Endpoint.Address}";
-                        request.UserAgent = "remoteplay Windows";
-                        request.KeepAlive = false;
-                        request.Connection = "close";
-                        request.ContentLength = finalPaddedPayload.Length;
-
-                        // Custom header fields
-                        request.GetRequestStream().Write(finalPaddedPayload, 0, finalPaddedPayload.Length);
-
-                        using (var response = (HttpWebResponse)request.GetResponse())
-                        {
-                            if (response.StatusCode != HttpStatusCode.OK)
-                            {
-                                OnPs4RegisterError?.Invoke(this, "sce/rp/regist was not successful, return code was: " + response.StatusCode);
-                            }
-
-                            byte[] responseData = new byte[response.ContentLength];
-                            var readBytes = response.GetResponseStream().Read(responseData, 0, responseData.Length);
-
-                            byte[] decryptedData = session.Decrypt(responseData);
-                            string registerHeaderInfoComplete = Encoding.UTF8.GetString(decryptedData);
-                            Dictionary<string, string> httpHeaders = ByteUtil.ByteArrayToHttpHeader(decryptedData);
-                            httpHeaders.TryGetValue("AP-Ssid", out var apSsid);
-                            httpHeaders.TryGetValue("AP-Bssid", out var apBssid);
-                            httpHeaders.TryGetValue("AP-Key", out var apKey);
-                            httpHeaders.TryGetValue("AP-Name", out var name);
-                            httpHeaders.TryGetValue("PS4-Mac", out var mac);
-                            httpHeaders.TryGetValue("PS4-RegistKey", out var registrationKey);
-                            httpHeaders.TryGetValue("PS4-Nickname", out var nickname);
-                            httpHeaders.TryGetValue("RP-KeyType", out var rpKeyType);
-                            httpHeaders.TryGetValue("RP-Key", out var rpKey);
-
-                            OnPs4RegisterSuccess?.Invoke(this, new PS4RegisterModel(apSsid, apBssid, apKey, name, mac, registrationKey, nickname, rpKeyType, rpKey, registerHeaderInfoComplete));
-                        }
+                        OnPs4RegisterError?.Invoke(this,
+                            "Could not connect to PS4. PS4 not found or not answering");
+                        return;
                     }
-                    catch (Exception e)
+
+                    Session session = CryptoService.GetSessionForPin(pin);
+
+                    Dictionary<string, string> registrationHeaders = new Dictionary<string, string>();
+                    registrationHeaders.Add("Client-Type", "Windows");
+                    registrationHeaders.Add("Np-Online-Id", psnId);
+                    byte[] payload = session.Encrypt(ByteUtil.HttpHeadersToByteArray(registrationHeaders));
+
+                    SecureRandom random = new SecureRandom();
+                    byte[] buffer = new byte[480];
+                    random.NextBytes(buffer);
+
+                    byte[] paddedPayload = ByteUtil.ConcatenateArrays(buffer, payload);
+                    byte[] nonceDerivative = session.GetNonceDerivative();
+                    byte[] finalPaddedPayload;
+                    using (var ms = new MemoryStream())
                     {
-                        OnPs4RegisterError?.Invoke(this, "Could not connect to PS4. Exception: " + e);
+                        ms.SetLength(paddedPayload.Length);
+                        ms.Write(paddedPayload, 0, paddedPayload.Length);
+                        ms.Seek(284, SeekOrigin.Begin);
+                        ms.Write(nonceDerivative, 0, nonceDerivative.Length);
+                        finalPaddedPayload = ms.ToArray();
                     }
+
+                    var request = new HttpRequestMessage(HttpMethod.Post,
+                        $"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/regist");
+
+                    request.Headers.Host = $"{ps4Endpoint.Address}";
+                    request.Headers.ConnectionClose = true;
+
+                    request.Content = new ByteArrayContent(finalPaddedPayload);
+
+                    using (var response = await _httpClient.SendAsync(request))
+                    {
+                        if (response.StatusCode != HttpStatusCode.OK)
+                        {
+                            OnPs4RegisterError?.Invoke(this, "sce/rp/regist was not successful, return code was: " + response.StatusCode);
+                        }
+
+                        byte[] responseData = await response.Content.ReadAsByteArrayAsync();
+
+                        byte[] decryptedData = session.Decrypt(responseData);
+                        string registerHeaderInfoComplete = Encoding.UTF8.GetString(decryptedData);
+                        Dictionary<string, string> httpHeaders = ByteUtil.ByteArrayToHttpHeader(decryptedData);
+                        httpHeaders.TryGetValue("AP-Ssid", out var apSsid);
+                        httpHeaders.TryGetValue("AP-Bssid", out var apBssid);
+                        httpHeaders.TryGetValue("AP-Key", out var apKey);
+                        httpHeaders.TryGetValue("AP-Name", out var name);
+                        httpHeaders.TryGetValue("PS4-Mac", out var mac);
+                        httpHeaders.TryGetValue("PS4-RegistKey", out var registrationKey);
+                        httpHeaders.TryGetValue("PS4-Nickname", out var nickname);
+                        httpHeaders.TryGetValue("RP-KeyType", out var rpKeyType);
+                        httpHeaders.TryGetValue("RP-Key", out var rpKey);
+
+                        OnPs4RegisterSuccess?.Invoke(this, new PS4RegisterModel(apSsid, apBssid, apKey, name, mac, registrationKey, nickname, rpKeyType, rpKey, registerHeaderInfoComplete));
+                    }
+                }
+                catch (Exception e)
+                {
+                    OnPs4RegisterError?.Invoke(this, "Could not connect to PS4. Exception: " + e);
                 }
             });
         }

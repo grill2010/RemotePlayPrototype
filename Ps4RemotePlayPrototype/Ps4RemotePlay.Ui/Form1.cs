@@ -159,7 +159,7 @@ namespace Ps4RemotePlay.Ui
             {
                 if (pin.Length == 8 && int.TryParse(pin, out var parsedPin))
                 {
-                    _ps4RegistrationService.PairConsole(psnId, parsedPin);
+                    _ps4RegistrationService.PairConsole(psnId, parsedPin).GetAwaiter().GetResult();
                 }
                 else
                 {
@@ -195,7 +195,8 @@ namespace Ps4RemotePlay.Ui
                         PS4RemotePlayData remotePlayData = _settingManager.GetRemotePlayData();
                         if (remotePlayData != null)
                         {
-                            _ps4ConnectionService.ConnectToPS4(pS4DiscoveryInfo.Ps4EndPoint, remotePlayData);
+                            _ps4ConnectionService.ConnectToPS4(pS4DiscoveryInfo.Ps4EndPoint, remotePlayData)
+                                .GetAwaiter().GetResult();
                         }
                         else
                         {

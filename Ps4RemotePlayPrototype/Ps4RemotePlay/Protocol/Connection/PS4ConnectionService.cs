@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -31,6 +34,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         public EventHandler<string> OnPs4LogInfo;
 
+        private HttpClient _httpClient;
         private Session _currentSession;
 
         /************ ping pong variables ************/
@@ -45,16 +49,15 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         public PS4ConnectionService()
         {
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("remoteplay Windows");
         }
 
-        public void ConnectToPS4(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
+        public async Task ConnectToPS4(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
-            Task.Factory.StartNew(() =>
+            await Task.Factory.StartNew(async () =>
             {
-                lock (_lockObject)
-                {
-                    HandleSessionRequest(ps4Endpoint, ps4RemotePlayData);
-                }
+                await HandleSessionRequest(ps4Endpoint, ps4RemotePlayData);
             });
         }
 
@@ -80,22 +83,21 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         /*********** Session request ***********/
 
-        private void HandleSessionRequest(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
+        private async Task HandleSessionRequest(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
-            var request = HttpWebRequest.CreateHttp($"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session");
-            request.Method = "GET";
-            request.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
-            request.UserAgent = "remoteplay Windows";
-            request.KeepAlive = false;
-            request.Connection = "close";
-            request.ContentLength = 0;
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session");
+
+            request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
+            request.Headers.ConnectionClose = true;
+            request.Content.Headers.ContentLength = 0;
 
             // Custom header fields
-            request.Headers["RP-Registkey"] = ps4RemotePlayData.RemotePlay.RegistrationKey;
-            request.Headers["RP-Version"] = "8.0";
+            request.Headers.Add("RP-Registkey", ps4RemotePlayData.RemotePlay.RegistrationKey);
+            request.Headers.Add("RP-Version", "8.0");
 
             string rpNonce = null;
-            using (var response = (HttpWebResponse)request.GetResponse())
+            using (var response = await _httpClient.SendAsync(request))
             {
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
@@ -104,15 +106,15 @@ namespace Ps4RemotePlay.Protocol.Connection
                 }
 
                 OnPs4LogInfo?.Invoke(this, "\"/sce/rp/session\" response: " + Environment.NewLine + response.ToString() + Environment.NewLine);
-                rpNonce = response.Headers["RP-Nonce"];
+                rpNonce = response.Headers.GetValues("RP-Nonce").First();
             }
 
-            this.HandleControlRequest(rpNonce, ps4Endpoint, ps4RemotePlayData);
+            await this.HandleControlRequest(rpNonce, ps4Endpoint, ps4RemotePlayData);
         }
 
         /*********** Control request ***********/
 
-        private void HandleControlRequest(string rpNonce, IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
+        private async Task HandleControlRequest(string rpNonce, IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
             byte[] rpKeyBuffer = HexUtil.Unhexlify(ps4RemotePlayData.RemotePlay.RpKey);
             byte[] rpNonceDecoded = Convert.FromBase64String(rpNonce);
@@ -144,24 +146,24 @@ namespace Ps4RemotePlay.Protocol.Connection
             byte[] encryptedOsType = session.Encrypt(ByteUtil.ConcatenateArrays(osTypeBuffer, osTypePadding));
             string encodedOsType = Convert.ToBase64String(encryptedOsType);
 
-            var request = HttpWebRequest.CreateHttp($"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session/ctrl");
-            request.Method = "GET";
-            request.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
-            request.UserAgent = "remoteplay Windows";
-            request.KeepAlive = true;
-            request.ContentLength = 0;
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"http://{ps4Endpoint.Address}:{RpControlPort}/sce/rp/session/ctrl");
+
+            request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
+            request.Headers.ConnectionClose = false;
+            request.Content.Headers.ContentLength = 0;
 
             // Custom header fields
-            request.Headers["RP-Auth"] = encodedRegistrationKey;
-            request.Headers["RP-Version"] = "8.0";
-            request.Headers["RP-Did"] = encodedDid;
-            request.Headers["RP-ControllerType"] = "3";
-            request.Headers["RP-ClientType"] = "11";
-            request.Headers["RP-OSType"] = encodedOsType;
-            request.Headers["RP-ConPath"] = "1";
+            request.Headers.Add("RP-Auth", encodedRegistrationKey);
+            request.Headers.Add("RP-Version", "8.0");
+            request.Headers.Add("RP-Did", encodedDid);
+            request.Headers.Add("RP-ControllerType", "3");
+            request.Headers.Add("RP-ClientType", "11");
+            request.Headers.Add("RP-OSType", encodedOsType);
+            request.Headers.Add("RP-ConPath", "1");
 
 
-            using (var response = (HttpWebResponse)request.GetResponse())
+            using (var response = await _httpClient.SendAsync(request))
             {
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
