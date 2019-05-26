@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using ProtoBuf;
 using Ps4RemotePlay.Protocol.Crypto;
+using Ps4RemotePlay.Protocol.Handler;
 using Ps4RemotePlay.Protocol.Message;
 using Ps4RemotePlay.Util;
 using Timer = System.Timers.Timer;
@@ -34,6 +35,8 @@ namespace Ps4RemotePlay.Protocol.Connection
         public EventHandler<string> OnPs4LogInfo;
 
         private Socket _clientSocket;
+
+        private Socket _udpClient;
 
         private Session _currentSession;
 
@@ -74,6 +77,9 @@ namespace Ps4RemotePlay.Protocol.Connection
                 _clientSocket?.Close();
                 _clientSocket?.Dispose();
 
+                _udpClient?.Close();
+                _udpClient?.Dispose();
+
                 _timeoutTimer?.Stop();
             }
         }
@@ -84,6 +90,9 @@ namespace Ps4RemotePlay.Protocol.Connection
             {
                 _clientSocket?.Close();
                 _clientSocket?.Dispose();
+
+                _udpClient?.Close();
+                _udpClient?.Dispose();
 
                 _timeoutTimer?.Close();
                 _timeoutTimer?.Dispose();
@@ -226,8 +235,6 @@ namespace Ps4RemotePlay.Protocol.Connection
                     OnPs4ConnectionSuccess?.Invoke(this, EventArgs.Empty);
                     connectedSuccess = true;
                     HandleOpenRemotePlayChannel(session, ps4Endpoint);
-
-                    
                 }
             }
             catch (Exception e)
@@ -258,6 +265,8 @@ namespace Ps4RemotePlay.Protocol.Connection
             udpClient.ExclusiveAddressUse = false;
             udpClient.ReceiveTimeout = 5500;
             udpClient.Connect(ps4Endpoint.Address, RpRemotePlayPort);
+            //UdpState stateObject = new UdpState { udpClient = udpClient };
+
 
 
             MemoryStream memoryStream = new MemoryStream();
