@@ -90,7 +90,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
             request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
             request.Headers.ConnectionClose = true;
-            request.Content.Headers.ContentLength = 0;
+            request.Content = new ByteArrayContent(new byte[0]);
 
             // Custom header fields
             request.Headers.Add("RP-Registkey", ps4RemotePlayData.RemotePlay.RegistrationKey);
@@ -151,7 +151,7 @@ namespace Ps4RemotePlay.Protocol.Connection
 
             request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
             request.Headers.ConnectionClose = false;
-            request.Content.Headers.ContentLength = 0;
+            request.Content = new ByteArrayContent(new byte[0]);
 
             // Custom header fields
             request.Headers.Add("RP-Auth", encodedRegistrationKey);
