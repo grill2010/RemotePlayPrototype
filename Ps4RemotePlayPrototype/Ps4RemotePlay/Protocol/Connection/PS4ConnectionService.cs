@@ -90,30 +90,39 @@ namespace Ps4RemotePlay.Protocol.Connection
 
         private async Task HandleSessionRequest(IPEndPoint ps4Endpoint, PS4RemotePlayData ps4RemotePlayData)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "sce/rp/session");
-
-            request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
-            request.Headers.ConnectionClose = true;
-            request.Content = new ByteArrayContent(new byte[0]);
-
-            // Custom header fields
-            request.Headers.Add("RP-Registkey", ps4RemotePlayData.RemotePlay.RegistrationKey);
-            request.Headers.Add("RP-Version", "8.0");
-
-            string rpNonce = null;
-            using (var response = await _httpClient.SendAsync(request))
+            try
             {
-                if (response.StatusCode != HttpStatusCode.OK)
+                var request = new HttpRequestMessage(HttpMethod.Get, "sce/rp/session");
+
+                request.Headers.Host = $"{ps4Endpoint.Address}:{RpControlPort}";
+                request.Headers.ConnectionClose = true;
+                request.Content = new ByteArrayContent(new byte[0]);
+
+                // Custom header fields
+                request.Headers.Add("RP-Registkey", ps4RemotePlayData.RemotePlay.RegistrationKey);
+                request.Headers.Add("RP-Version", "8.0");
+
+                string rpNonce = null;
+                using (var response = await _httpClient.SendAsync(request))
                 {
-                    OnPs4ConnectionError?.Invoke(this, $"Invalid response from sending /sce/rp/session, Code: {response.StatusCode}");
-                    return;
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        OnPs4ConnectionError?.Invoke(this, $"Invalid response from sending /sce/rp/session, Code: {response.StatusCode}");
+                        return;
+                    }
+
+                    OnPs4LogInfo?.Invoke(this, "\"/sce/rp/session\" response: " + Environment.NewLine + response.ToString() + Environment.NewLine);
+                    rpNonce = response.Headers.GetValues("RP-Nonce").First();
                 }
 
-                OnPs4LogInfo?.Invoke(this, "\"/sce/rp/session\" response: " + Environment.NewLine + response.ToString() + Environment.NewLine);
-                rpNonce = response.Headers.GetValues("RP-Nonce").First();
+                await this.HandleControlRequest(rpNonce, ps4Endpoint, ps4RemotePlayData);
+            }
+            catch (Exception)
+            {
+                // This exception will be thrown
+                // ToDo remove
             }
 
-            await this.HandleControlRequest(rpNonce, ps4Endpoint, ps4RemotePlayData);
         }
 
         /*********** Control request ***********/

@@ -90,7 +90,7 @@
             // 
             this.button1.Location = new System.Drawing.Point(578, 185);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(244, 23);
+            this.button1.Size = new System.Drawing.Size(328, 23);
             this.button1.TabIndex = 4;
             this.button1.Text = "Register";
             this.button1.UseVisualStyleBackColor = true;
@@ -100,7 +100,7 @@
             // 
             this.textBoxPsnId.Location = new System.Drawing.Point(578, 41);
             this.textBoxPsnId.Name = "textBoxPsnId";
-            this.textBoxPsnId.Size = new System.Drawing.Size(244, 20);
+            this.textBoxPsnId.Size = new System.Drawing.Size(328, 20);
             this.textBoxPsnId.TabIndex = 5;
             // 
             // textBoxRpKey
@@ -108,7 +108,7 @@
             this.textBoxRpKey.Location = new System.Drawing.Point(578, 90);
             this.textBoxRpKey.MaxLength = 8;
             this.textBoxRpKey.Name = "textBoxRpKey";
-            this.textBoxRpKey.Size = new System.Drawing.Size(244, 20);
+            this.textBoxRpKey.Size = new System.Drawing.Size(328, 20);
             this.textBoxRpKey.TabIndex = 6;
             this.textBoxRpKey.TextChanged += new System.EventHandler(this.textBoxRpKey_TextChanged);
             this.textBoxRpKey.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.textBoxRpKey_KeyPress);
@@ -136,7 +136,7 @@
             this.button2.Enabled = false;
             this.button2.Location = new System.Drawing.Point(578, 406);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(244, 23);
+            this.button2.Size = new System.Drawing.Size(328, 23);
             this.button2.TabIndex = 9;
             this.button2.Text = "Connect";
             this.button2.UseVisualStyleBackColor = true;
@@ -147,7 +147,7 @@
             this.labelRegistryAesKey.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.labelRegistryAesKey.Location = new System.Drawing.Point(578, 140);
             this.labelRegistryAesKey.Name = "labelRegistryAesKey";
-            this.labelRegistryAesKey.Size = new System.Drawing.Size(244, 36);
+            this.labelRegistryAesKey.Size = new System.Drawing.Size(328, 36);
             this.labelRegistryAesKey.TabIndex = 10;
             this.labelRegistryAesKey.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
@@ -157,7 +157,7 @@
             this.labelRegistryAesKeyHeading.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelRegistryAesKeyHeading.Location = new System.Drawing.Point(575, 122);
             this.labelRegistryAesKeyHeading.Name = "labelRegistryAesKeyHeading";
-            this.labelRegistryAesKeyHeading.Size = new System.Drawing.Size(247, 18);
+            this.labelRegistryAesKeyHeading.Size = new System.Drawing.Size(331, 18);
             this.labelRegistryAesKeyHeading.TabIndex = 11;
             this.labelRegistryAesKeyHeading.Text = "Used AES-Regist Key:";
             this.labelRegistryAesKeyHeading.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -178,7 +178,7 @@
             this.button3.Enabled = false;
             this.button3.Location = new System.Drawing.Point(581, 629);
             this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(244, 23);
+            this.button3.Size = new System.Drawing.Size(325, 23);
             this.button3.TabIndex = 13;
             this.button3.Text = "Load Pcap file";
             this.button3.UseVisualStyleBackColor = true;
@@ -198,7 +198,7 @@
             this.comboBoxNetworkAdapter.FormattingEnabled = true;
             this.comboBoxNetworkAdapter.Location = new System.Drawing.Point(582, 488);
             this.comboBoxNetworkAdapter.Name = "comboBoxNetworkAdapter";
-            this.comboBoxNetworkAdapter.Size = new System.Drawing.Size(240, 21);
+            this.comboBoxNetworkAdapter.Size = new System.Drawing.Size(324, 21);
             this.comboBoxNetworkAdapter.TabIndex = 15;
             this.comboBoxNetworkAdapter.SelectedIndexChanged += new System.EventHandler(this.comboBoxNetworkAdapter_SelectedIndexChanged);
             // 
@@ -216,7 +216,7 @@
             this.button4.Enabled = false;
             this.button4.Location = new System.Drawing.Point(582, 515);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(244, 23);
+            this.button4.Size = new System.Drawing.Size(324, 23);
             this.button4.TabIndex = 17;
             this.button4.Text = "Live Pcap parsing";
             this.button4.UseVisualStyleBackColor = true;
@@ -226,7 +226,7 @@
             // 
             this.labelCapturingIndication.AutoSize = true;
             this.labelCapturingIndication.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelCapturingIndication.Location = new System.Drawing.Point(651, 541);
+            this.labelCapturingIndication.Location = new System.Drawing.Point(691, 541);
             this.labelCapturingIndication.Name = "labelCapturingIndication";
             this.labelCapturingIndication.Size = new System.Drawing.Size(104, 13);
             this.labelCapturingIndication.TabIndex = 18;
@@ -237,7 +237,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(834, 661);
+            this.ClientSize = new System.Drawing.Size(918, 661);
             this.Controls.Add(this.labelCapturingIndication);
             this.Controls.Add(this.button4);
             this.Controls.Add(this.label6);

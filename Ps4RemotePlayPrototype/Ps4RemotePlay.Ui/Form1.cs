@@ -31,9 +31,9 @@ namespace Ps4RemotePlay.Ui
         private readonly PS4RegistrationService _ps4RegistrationService;
         private readonly PS4DiscoveryService _ps4DiscoveryService;
 
-        private LivePcapContext _livePcapContext;
+        private readonly LivePcapContext _livePcapContext;
 
-        private readonly List<LivePacketDevice> networkAdapters = new List<LivePacketDevice>();
+        private readonly List<LivePacketDevice> _networkAdapters = new List<LivePacketDevice>();
 
         public Form1()
         {
@@ -262,7 +262,7 @@ namespace Ps4RemotePlay.Ui
         private void button4_Click(object sender, EventArgs e)
         {
             int selectedIndex = this.comboBoxNetworkAdapter.SelectedIndex;
-            if (selectedIndex >= 0 && selectedIndex <= (this.networkAdapters.Count - 1))
+            if (selectedIndex >= 0 && selectedIndex <= (this._networkAdapters.Count - 1))
             {
                 DisableLivePcapParsingButton();
                 DisablePcapButton();
@@ -270,7 +270,7 @@ namespace Ps4RemotePlay.Ui
                 comboBoxNetworkAdapter.Enabled = false;
                 Task.Factory.StartNew(() =>
                 {
-                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+                    LivePacketDevice selectedDevice = this._networkAdapters[selectedIndex];
                     // 65536 guarantees that the whole packet will be captured on all the link layers
                     using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
                     {
@@ -286,7 +286,7 @@ namespace Ps4RemotePlay.Ui
                 });
                 Task.Factory.StartNew(() =>
                 {
-                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+                    LivePacketDevice selectedDevice = this._networkAdapters[selectedIndex];
 
                     // 65536 guarantees that the whole packet will be captured on all the link layers
                     using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -426,12 +426,21 @@ namespace Ps4RemotePlay.Ui
             }
             else
             {
-                networkAdapters.AddRange(allDevices);
-                foreach (var networkAdapter in networkAdapters)
+                _networkAdapters.AddRange(allDevices);
+                foreach (var networkAdapter in _networkAdapters)
                 {
                     string description = networkAdapter.Description ?? networkAdapter.Name;
                     description = description.Replace("Network adapter", "");
-                    description += String.Format(" ({0})", networkAdapter.Addresses.Last().Address);
+                    if (description.Length > 25)
+                    {
+                        description = description.Substring(0, 25);
+                        description += "...";
+                    }
+
+                    if (networkAdapter.Addresses.Count > 0)
+                    {
+                        description += $" ({networkAdapter.Addresses.Last().Address})";
+                    }
                     this.comboBoxNetworkAdapter.Items.Add(description);
                 }
 
