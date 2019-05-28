@@ -188,7 +188,7 @@ namespace Ps4RemotePlay.Protocol.Connection
                 OnPs4LogInfo?.Invoke(this, "TCP connection to PS4 established" + Environment.NewLine);
             }
 
-            StartKeepAlive($"http://{ps4Endpoint.Address}:{RpControlPort}");
+            StartKeepAlive("sce/rp/session/ctrl");
 
             OnPs4ConnectionSuccess?.Invoke(this, EventArgs.Empty);
             HandleOpenRemotePlayChannel(session, ps4Endpoint);
