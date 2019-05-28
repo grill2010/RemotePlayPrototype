@@ -51,7 +51,8 @@ namespace Ps4RemotePlay.Protocol.Connection
         public PS4ConnectionService(IPEndPoint consoleEp)
         {
             _consoleEp = consoleEp;
-            _httpClient = new HttpClient()
+
+            _httpClient = new HttpClient(new WinHttpHandler())
             {
                 BaseAddress = new Uri($"http://{_consoleEp.Address}:{RpControlPort}/")
             };
@@ -502,18 +503,16 @@ namespace Ps4RemotePlay.Protocol.Connection
         /// <param name="result">The ping ping async result.</param>
         public void StartKeepAlive(string url)
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 while (!_cancellationTokenSource.IsCancellationRequested)
                 {
                     try
                     {
-                        var request = HttpWebRequest.Create(url);
-                        request.Timeout = 3000; // milliseconds
+                        var request = new HttpRequestMessage(HttpMethod.Get, url);
+                        request.Content = new ByteArrayContent(StatusPacket);
 
-                        request.GetRequestStream().Write(StatusPacket, 0, StatusPacket.Length);
-
-                        var response = request.GetResponse();
+                        var response = await _httpClient.SendAsync(request);
                     }
                     catch (TimeoutException)
                     {
