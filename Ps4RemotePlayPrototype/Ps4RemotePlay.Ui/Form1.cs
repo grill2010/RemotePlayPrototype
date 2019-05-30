@@ -124,12 +124,14 @@ namespace Ps4RemotePlay.Ui
 
         private void OnPs4Disconnected(object sender, string errorMessage)
         {
+            this._ps4ConnectionService.CloseConnection();
             this.button2.Invoke(new MethodInvoker(EnableConnectButton));
             MessageBox.Show(errorMessage, "Connection lost", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void OnPs4ConnectionError(object sender, string errorMessage)
         {
+            this._ps4ConnectionService.CloseConnection();
             this.button2.Invoke(new MethodInvoker(EnableConnectButton));
             MessageBox.Show("Could not connect to PS4, error: " + errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }

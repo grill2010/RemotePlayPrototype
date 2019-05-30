@@ -38,3 +38,4 @@ The Func Incr value is used to to find the matching acknowledge control message 
 ### Class(?)
 
 It seems to be that control messages which are sent for acknowleding data have a class value of 00019000, and control messages which are used for sending new data have a class value of 00090000.
+Control messages with CorrupredFramePayload seems to have a class value of 00020000.
