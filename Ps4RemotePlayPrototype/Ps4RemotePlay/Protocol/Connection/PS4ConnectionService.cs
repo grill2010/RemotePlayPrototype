@@ -19,11 +19,11 @@ namespace Ps4RemotePlay.Protocol.Connection
 {
     public class PS4ConnectionService : IDisposable
     {
-        private const int RpControlPort = 9295;
+        private const int ControlPort = 9295;
 
-        private const int RpRemotePlayPort = 9296;
+        private const int RemotePlayPort = 9296;
 
-        private const int RpUnknonwPort = 9297; // it is used by the official ps4 remote play client but I don't know yet how and why it is used (3rd party client is not using this port at all)
+        private const int UnknonwPort = 9297; // it is used by the official ps4 remote play client but I don't know yet how and why it is used (3rd party client is not using this port at all)
 
         private const int MaxUdpPacketSize = 65_000;
 
@@ -38,8 +38,6 @@ namespace Ps4RemotePlay.Protocol.Connection
         private Socket _clientSocket;
 
         private Socket _udpClient;
-
-        private Session _currentSession;
 
         /************ ping pong variables ************/
 
@@ -110,7 +108,7 @@ namespace Ps4RemotePlay.Protocol.Connection
         {
             try
             {
-                IPEndPoint ipEndPoint = new IPEndPoint(ps4Endpoint.Address, RpControlPort);
+                IPEndPoint ipEndPoint = new IPEndPoint(ps4Endpoint.Address, ControlPort);
                 using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                 {
                     socket.ReceiveTimeout = 5000;
@@ -169,7 +167,7 @@ namespace Ps4RemotePlay.Protocol.Connection
             Socket socket = null;
             try
             {
-                IPEndPoint ipEndPoint = new IPEndPoint(ps4Endpoint.Address, RpControlPort);
+                IPEndPoint ipEndPoint = new IPEndPoint(ps4Endpoint.Address, ControlPort);
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socket.Connect(ipEndPoint);
 
@@ -203,7 +201,7 @@ namespace Ps4RemotePlay.Protocol.Connection
                 byte[] encryptedOsType = session.Encrypt(ByteUtil.ConcatenateArrays(osTypeBuffer, osTypePadding));
                 string encodedOsType = Convert.ToBase64String(encryptedOsType);
 
-                string host = ps4Endpoint.Address + ":" + RpControlPort;
+                string host = ps4Endpoint.Address + ":" + ControlPort;
 
                 string requestData = "GET /sce/rp/session/ctrl HTTP/1.1\r\n" +
                                      $"HOST: {host}\r\n" +
@@ -266,12 +264,14 @@ namespace Ps4RemotePlay.Protocol.Connection
                 udpClient.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 udpClient.ExclusiveAddressUse = false;
                 udpClient.ReceiveTimeout = 5500;
-                udpClient.Connect(ps4Endpoint.Address, RpRemotePlayPort);
+                udpClient.Connect(ps4Endpoint.Address, RemotePlayPort);
 
                 RemotePlayContext remotePlayContext = SendInitControlMessages(udpClient);
                 if (remotePlayContext == null)
                 {
                     udpClient.Close();
+                    udpClient.Dispose();
+                    Thread.Sleep(2500);
                     continue;
                 }
 
@@ -279,6 +279,8 @@ namespace Ps4RemotePlay.Protocol.Connection
                 if (remotePlayContext == null)
                 {
                     udpClient.Close();
+                    udpClient.Dispose();
+                    Thread.Sleep(2500);
                     continue;
                 }
 
@@ -286,13 +288,15 @@ namespace Ps4RemotePlay.Protocol.Connection
                 if (remotePlayContext == null)
                 {
                     udpClient.Close();
+                    udpClient.Dispose();
+                    Thread.Sleep(2500);
                     continue;
                 }
 
                 OnPs4LogInfo?.Invoke(this, "!!!!!!!!!!!!! Stream initialization successfully completed" + Environment.NewLine);
 
                 _udpClient = udpClient;
-                RemotePlayAsyncState remotePlayAsyncState = new RemotePlayAsyncState(remotePlayContext);
+                RemotePlayAsyncState remotePlayAsyncState = new RemotePlayAsyncState(remotePlayContext, session);
                 _udpClient.BeginReceive(remotePlayAsyncState.Buffer, 0, remotePlayAsyncState.Buffer.Length, SocketFlags.None, HandleRemotePlayStream, remotePlayAsyncState);
 
                 break;
@@ -327,6 +331,20 @@ namespace Ps4RemotePlay.Protocol.Connection
                         ackControlMessage.UnParsedPayload = ackBangPayload;
 
                         SendData(_udpClient, GetByteArrayForControlMessage(ackControlMessage));
+
+                        /*if (controlMessage.ProtoBuffFlag == 1 && controlMessage.UnParsedPayload.Length > 0 && controlMessage.UnParsedPayload.Length != 7) WIP
+                        {
+                            TakionMessage takionMessage = Serializer.Deserialize<TakionMessage>(new MemoryStream(controlMessage.UnParsedPayload));
+                            if (takionMessage.Type == TakionMessage.PayloadType.Heartbeat)
+                            {
+                                byte[] heartbeatPayload = HexUtil.Unhexlify("000803");
+                                short heartbeatPayloadSize = (short) (12 + heartbeatPayload.Length);
+                                ControlMessage heartbeatControlMessage = new ControlMessage(0, remotePlayAsyncState.RemotePlayContext.ReceiverId, new Random().Next(), controlMessage.TagPos + 0x10, 0, 1, heartbeatPayloadSize, controlMessage.FuncIncr, 0x10000);
+                                heartbeatControlMessage.UnParsedPayload = heartbeatPayload;
+
+                                SendData(_udpClient, GetByteArrayForControlMessage(heartbeatControlMessage));
+                            }
+                        }*/
                     }
 
                     _udpClient.BeginReceive(remotePlayAsyncState.Buffer, 0, remotePlayAsyncState.Buffer.Length, SocketFlags.None, HandleRemotePlayStream, remotePlayAsyncState);
@@ -757,11 +775,14 @@ namespace Ps4RemotePlay.Protocol.Connection
         {
             public RemotePlayContext RemotePlayContext { get; }
 
+            public Session Session { get; set; }
+
             public byte[] Buffer = new byte[MaxUdpPacketSize];
 
-            public RemotePlayAsyncState(RemotePlayContext RemotePlayContext)
+            public RemotePlayAsyncState(RemotePlayContext remotePlayContext, Session session)
             {
-                this.RemotePlayContext = RemotePlayContext;
+                this.RemotePlayContext = remotePlayContext;
+                this.Session = session;
             }
         }
 
