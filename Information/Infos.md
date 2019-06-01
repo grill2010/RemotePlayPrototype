@@ -29,7 +29,7 @@ If the value is 1 then it has a TakionMessage payload in it otherwhise 0
 
 ### PLoad Size
 
-Is the size of the payload but it is not yet clear how the size is calculated.
+Is the size of the payload and the size of the Flag1, ProtoBuffFlag, PLoadSize, FuncIncr and the class(?) value of the control message. The values of the control messages are usually 12 bytes.
 
 ### Func Incr
 

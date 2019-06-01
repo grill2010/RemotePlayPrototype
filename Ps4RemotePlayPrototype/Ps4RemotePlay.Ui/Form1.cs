@@ -189,6 +189,7 @@ namespace Ps4RemotePlay.Ui
                     this.textBoxLogOutput.Invoke(new MethodInvoker(() => AppendLogOutput("Discovery response:" + Environment.NewLine + pS4DiscoveryInfo.RawResponseData)));
                     if (pS4DiscoveryInfo.Status == 620)
                     {
+                        this.button2.Invoke(new MethodInvoker(EnableConnectButton));
                         MessageBox.Show("PS4 Found but status is 620, wake up is currently not implemented", "Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
@@ -200,6 +201,7 @@ namespace Ps4RemotePlay.Ui
                         }
                         else
                         {
+                            this.button2.Invoke(new MethodInvoker(EnableConnectButton));
                             MessageBox.Show("Could not connect to PS4. No register data is available.", "No PS4 Data", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
