@@ -50,9 +50,7 @@ Interceptor.attach(libRpCtrlWrapperBaseAddr.add(cryptCalculateSha256), {
 		console.log("Crypt::CalculateSha256 called ");
 	},
 	onLeave: function(retval){
-		//var data = Memory.readByteArray(this.inputBuffer, this.inputSize);
 		var hash = Memory.readByteArray(this.outputPtr, 32);
-		//console.log("InputBuffer: " + bytesToString(data));
 		//console.log("SHA256: " + bytesToString(hash));
 	}
 });
