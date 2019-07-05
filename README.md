@@ -56,3 +56,4 @@ The PS4 also uses some FEC correction mechanism but because of the other problem
 - Apktool (for reversing the Android client and obtaining libremote.so file)
 - [Frida](https://www.frida.re/docs/functions/)
 - [API Monitor v2](http://www.rohitab.com/apimonitor)
+- Microsoft Visual Studio Community 2017
