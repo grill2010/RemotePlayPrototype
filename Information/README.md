@@ -12,13 +12,13 @@ The first anwer of from the PS4 to the first Init Control message has a FuncIncr
 
 The first Init Control message sent from the client to the PS and its FuncIncr value is the value the PS4 will use for its ReceiverId in the control messages. (It seems to be the value is always 00004823)
 
-### Crypoto
+### Crypto (Crypoto)
 
 That's not clear yet what this value is used for, but it could be some random number which is then used for the IV counter.
 
 ### TagPos
 
-Not yet clear. Seems to be used when the crypoto value is used. TagPos is contained in other messages as well.
+Not yet clear. Seems to be used when the crypto (crypoto) value is used. TagPos is contained in other messages as well.
 
 ### Flag1
 

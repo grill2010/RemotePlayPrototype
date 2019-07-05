@@ -1,0 +1,368 @@
+syntax = "proto2";
+
+package GK.takion.proto;
+
+import "senkusha.proto";
+
+message TakionMessage {
+    required PayloadType type = 1;
+    enum PayloadType {
+        BIG = 0;
+        BANG = 1;
+        INFO = 2;
+        HEARTBEAT = 3;
+        PACKETLOSS = 4;
+        CORRUPTFRAME = 5;
+        CURSOR = 6;
+        TIMER = 7;
+        DISCONNECT = 8;
+        LOG = 9;
+        HEADERREQUEST = 10;
+        DEBUG = 11;
+        SENKUSHA = 12;
+        STREAMINFO = 13;
+        STREAMINFOACK = 14;
+        XMBCOMMAND = 15;
+        CONNECTIONQUALITY = 16;
+        CLIENTMETRIC = 17;
+        PLAYTIMELEFT = 18;
+        SERVERMESSAGE = 19;
+        FPSCHANGE = 20;
+        CONTROLLERCONNECTION = 21;
+        CLIENTINFO = 22;
+        VIDEOCAPTURE = 23;
+        AUDIOCAPTURE = 24;
+        IDRREQUEST = 25;
+        GKTRACE = 26;
+        PERIODICTIMESTAMP = 27;
+        SERVERSETTINGS = 28;
+        DIRECTMESSAGE = 29;
+    }
+    
+    optional BigPayload bigPayload = 2;
+    optional BangPayload bangPayload = 3;
+    optional InfoPayload infoPayload = 4;
+    optional PacketLossPayload lossPayload = 5;
+    optional CorruptFramePayload corruptPayload = 6;
+    optional CursorPayload cursorPayload = 8;
+    optional TimerPayload timerPayload = 9;
+    optional DisconnectPayload disconnectPayload = 10;
+    optional LogPayload logPayload = 11;
+    optional HeaderRequestPayload headerPayload = 12;
+    optional DebugOption debugPayload = 13;
+    optional senkusha.SenkushaPayload senkushaPayload = 14;
+    optional StreamInfoPayload streamInfoPayload = 15;
+    optional XmbCommandPayload xmbCommandPayload = 16;
+    optional ConnectionQualityPayload connectionQualityPayload = 17;
+    optional ClientMetricPayload clientMetricPayload = 18;
+    optional PlayTimeLeftPayload playTimeLeftPayload = 19;
+    optional ServerMessagePayload serverMessagePayload = 20;
+    optional FpsChangePayload fpsChangePayload = 21;
+    optional ControllerConnectionPayload controllerConnectionPayload = 22;
+    optional ClientInfoPayload clientInfoPayload = 23;
+    optional VideoCapturePayload videoCapturePayload = 24;
+    optional AudioCapturePayload audioCapturePayload = 25;
+    optional GkTracePayload gkTracePayload = 26;
+    optional PeriodicTimestampPayload periodicTimestampPayload = 27;
+    optional ServerSettingsPayload serverSettingsPayload = 28;
+    optional DirectMessagePayload directMessagePayload = 29;
+}
+
+message EventCode {
+    required string eventCode = 1;
+    optional string name = 2;
+    optional string description = 3;
+}
+
+message BigPayload {
+    required uint32 clientVersion = 1;
+    required string sessionKey = 2;
+    required string launchSpec = 3;
+    required bytes encryptedKey = 4;
+    optional bytes ecdhPubKey = 5;
+    optional bytes ecdhSig = 6;
+}
+
+message BangPayload {
+    required uint32 serverVersion = 1;
+    required uint32 token = 2;
+    required bool encryptedKeyAccepted = 3;
+    required bool versionAccepted = 4;
+    required string sessionKey = 5;
+    optional EventCode extendedInfo = 6;
+    optional string serverVersionString = 7;
+    optional bytes ecdhPubKey = 8;
+    optional bytes ecdhSig = 9;
+}
+
+message InfoPayload {
+    required uint32 effectiveBw = 1;
+    required uint32 bitrate = 2;
+    required uint32 minBitrate = 3;
+    required uint32 targetBitrate = 4;
+    required uint32 corruptFrameFreq = 5;
+    required uint32 mtu = 6;
+    required uint32 fps = 7;
+    required uint32 monitorInterval = 8;
+    required uint32 extOverhead = 9;
+    required uint32 intOverhead = 10;
+    required uint32 timeoutInterval = 11;
+    required uint32 minResumeQuality = 12;
+    required uint32 minFps = 13;
+}
+
+message CursorPayload {
+    required uint32 id = 1;
+    required uint32 width = 2;
+    required uint32 height = 3;
+    required uint32 hotspotX = 4;
+    required uint32 hotspotY = 5;
+    optional bytes pixels = 6;
+}
+
+message TimerPayload {
+    required uint32 secondsLeft = 1;
+    required uint32 totalSeconds = 2;
+}
+
+message CorruptFramePayload {
+    required uint32 start = 1;
+    required uint32 end = 2;
+}
+
+message PacketLossPayload {
+    required uint32 start = 1;
+    required uint32 end = 2;
+    required uint32 packetsReceived = 3;
+}
+
+message FpsChangePayload {
+    required uint32 fps = 1;
+}
+
+message DisconnectPayload {
+    required string reason = 1;
+    optional EventCode extendedInfo = 2;
+}
+
+message LogMessage {
+    required int64 timestamp = 1;
+    
+    required LogLevel level = 2;
+    enum LogLevel {
+        CRITICAL = 0;
+        ERROR = 1;
+        WARNING = 2;
+        INFO = 3;
+        DEBUG = 4;
+        TRACE = 5;
+    }
+    
+    required string component = 3;
+    required string message = 4;
+    optional double timestampdouble = 5;
+}
+
+message LogPayload {
+    repeated LogMessage messages = 1;
+}
+
+message ClientMetric {
+    required Category category = 1;
+    enum Category {
+        VIDEO_FRAMELIFETIME = 0;
+        VIDEO_FRAMENALUSCOMPLETE = 1;
+        VIDEO_FECCORRECTION = 2;
+        VIDEO_FRAMEQUEUE = 3;
+        VIDEO_DECODERFRAMEQUEUE = 4;
+        VIDEO_SUBMITTODECODER = 5;
+        VIDEO_DECODE = 6;
+        VIDEO_DECODEDPICTUREDROP = 7;
+        VIDEO_YUVCOPY = 8;
+        VIDEO_TEXTURECOPY = 9;
+        VIDEO_RENDER = 10;
+        GRAPHICS_PRERENDER = 11;
+        GRAPHICS_PRESENT = 12;
+        AUDIO_FRAMELIFETIME = 13;
+        AUDIO_FRAMENALUSCOMPLETE = 14;
+        AUDIO_FECCORRECTION = 15;
+        AUDIO_FRAMEQUEUE = 16;
+        AUDIO_SUBMITTODECODER = 17;
+        AUDIO_DECODE = 18;
+        AUDIO_BUFFERCOPY = 19;
+        AUDIO_RENDER = 20;
+    }
+    
+    required int32 startFrame = 2;
+    required int32 endFrame = 3;
+    required int32 count = 5;
+    required float average = 6;
+    required float stdDev = 7;
+    required float minVal = 8;
+    required float maxVal = 9;
+}
+
+message ClientMetricPayload {
+    repeated ClientMetric messages = 1;
+}
+
+message HeaderRequestPayload {
+    required HeaderType type = 1;
+    enum HeaderType {
+        AUDIO = 0;
+        VIDEO = 1;
+    }
+}
+
+message DebugOption {
+    required Type type = 1;
+    enum Type {
+        OVERLAY = 0;
+        BITRATE = 1;
+    }
+    
+    optional OverlayPayload overlay = 2;
+    optional BitratePayload bitrate = 3;
+}
+
+message OverlayPayload {
+    optional bool enable = 1;
+    optional bool toggle = 2;
+    
+    optional LogLocation location = 3;
+    enum LogLocation {
+        TOP_LEFT = 0;
+        TOP_RIGHT = 1;
+        BOTTOM_LEFT = 2;
+        BOTTOM_RIGHT = 3;
+    }
+    
+    optional uint32 level = 4;
+}
+
+message BitratePayload {
+    optional bool toggle = 1;
+    optional float bitrateChange = 2;
+}
+
+message ResolutionPayload {
+    required uint32 width = 1;
+    required uint32 height = 2;
+    required bytes videoHeader = 3;
+}
+
+message StreamInfoPayload {
+    repeated ResolutionPayload resolution = 1;
+    required bytes audioHeader = 2;
+    optional uint32 startTimeout = 3;
+    optional uint32 afkTimeout = 4;
+    optional uint32 afkTimeoutDisconnect = 5;
+    optional uint32 congestionControlInterval = 6;
+}
+
+message XmbCommandPayload {
+    required XmbCommand command = 1;
+    enum XmbCommand {
+        OFF = 0;
+        ON = 1;
+        TOGGLE = 2;
+    }
+    
+    optional uint32 playerId = 2;
+}
+
+message ConnectionQualityPayload {
+    optional uint32 targetBitrate = 1;
+    optional uint32 upstreamBitrate = 2;
+    optional float upstreamLoss = 3;
+    optional bool disableUpstreamAudio = 4;
+}
+
+message PlayTimeLeftPayload {
+    optional uint32 timeleft = 1;
+    optional string reason = 2;
+}
+
+message ServerMessagePayload {
+    optional string payload = 1;
+}
+
+message ControllerConnectionPayload {
+    optional int32 controllerId = 1;
+    optional bool connected = 2;
+    
+    optional ControllerType controllerType = 3;
+    enum ControllerType {
+        NOTSET = 0;
+        DUALSHOCK3 = 1;
+        DUALSHOCK4 = 2;
+        VITA = 3;
+        XINPUT = 4;
+    }
+}
+
+message ClientInfoPayload {
+    required string sessionKey = 1;
+    optional uint32 gcmTag = 2;
+    optional uint32 keyPos = 3;
+}
+
+message VideoCapturePayload {
+    optional bool serverSide = 1 [default = false];
+    optional uint32 idrperiod = 2 [default = 0];
+}
+
+message AudioCapturePayload {
+    optional bool serverSide = 1 [default = false];
+}
+
+message ServerSettingsPayload {
+    optional uint32 idrperiod = 1 [default = 0];
+    optional bool sendPeriodicTimestamp = 2 [default = false];
+}
+
+message GkTracePayload {
+    required uint32 seqNo = 1;
+    required uint32 gcmTag = 2;
+    required uint32 keyPos = 3;
+}
+
+message PeriodicTimestampPayload {
+    required bytes periodicTsInfo = 1;
+    required uint32 version = 2;
+}
+
+message DeepLinkPayload {
+    required DeepLinkType deepLinkType = 1;
+    enum DeepLinkType {
+        SAVE_DATA = 0;
+        INVITE = 1;
+        GAME_ALERT = 2;
+        SYSTEM_SERVICE_STATUS = 3;
+        DEBUG_VSH_MENU = 4;
+    }
+    
+    optional uint32 requestId = 2;
+    optional uint32 padUniqueId = 3;
+    optional string invitationId = 4;
+    optional string sessionId = 5;
+    optional string itemId = 6;
+    optional string isSystemUiOverlaid = 7;
+    optional uint32 result = 8;
+    optional bool shouldShow = 9;
+}
+
+message DirectMessagePayload {
+    required DirectMessageType directMessageType = 1;
+    enum DirectMessageType {
+        DEEPLINK = 0;
+    }
+    
+    required Destination destination = 2;
+    enum Destination {
+        GAIKAI_CONTROLLER = 1000;
+        CLIENT = 1001;
+    }
+    
+    optional bytes data = 3;
+}
