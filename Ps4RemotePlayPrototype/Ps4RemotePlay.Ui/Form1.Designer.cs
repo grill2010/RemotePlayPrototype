@@ -166,6 +166,7 @@
             // textBoxPcapLogOutput
             // 
             this.textBoxPcapLogOutput.Location = new System.Drawing.Point(15, 469);
+            this.textBoxPcapLogOutput.MaxLength = 1000000;
             this.textBoxPcapLogOutput.Multiline = true;
             this.textBoxPcapLogOutput.Name = "textBoxPcapLogOutput";
             this.textBoxPcapLogOutput.ReadOnly = true;

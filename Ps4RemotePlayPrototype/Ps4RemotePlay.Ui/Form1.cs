@@ -11,7 +11,6 @@ using PcapDotNet.Packets;
 using PcapDotNet.Packets.Http;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.Transport;
-using Ps4RemotePlay;
 using Ps4RemotePlay.Protocol.Connection;
 using Ps4RemotePlay.Protocol.Crypto;
 using Ps4RemotePlay.Protocol.Discovery;
@@ -32,9 +31,9 @@ namespace Ps4RemotePlay.Ui
         private readonly PS4DiscoveryService _ps4DiscoveryService;
         private readonly PS4ConnectionService _ps4ConnectionService;
 
-        private LivePcapContext _livePcapContext;
+        private readonly LivePcapContext _livePcapContext;
 
-        private readonly List<LivePacketDevice> networkAdapters = new List<LivePacketDevice>();
+        private readonly List<LivePacketDevice> _networkAdapters = new List<LivePacketDevice>();
 
         public Form1()
         {
@@ -125,12 +124,14 @@ namespace Ps4RemotePlay.Ui
 
         private void OnPs4Disconnected(object sender, string errorMessage)
         {
+            this._ps4ConnectionService.CloseConnection();
             this.button2.Invoke(new MethodInvoker(EnableConnectButton));
             MessageBox.Show(errorMessage, "Connection lost", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void OnPs4ConnectionError(object sender, string errorMessage)
         {
+            this._ps4ConnectionService.CloseConnection();
             this.button2.Invoke(new MethodInvoker(EnableConnectButton));
             MessageBox.Show("Could not connect to PS4, error: " + errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -188,6 +189,7 @@ namespace Ps4RemotePlay.Ui
                     this.textBoxLogOutput.Invoke(new MethodInvoker(() => AppendLogOutput("Discovery response:" + Environment.NewLine + pS4DiscoveryInfo.RawResponseData)));
                     if (pS4DiscoveryInfo.Status == 620)
                     {
+                        this.button2.Invoke(new MethodInvoker(EnableConnectButton));
                         MessageBox.Show("PS4 Found but status is 620, wake up is currently not implemented", "Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
@@ -199,6 +201,7 @@ namespace Ps4RemotePlay.Ui
                         }
                         else
                         {
+                            this.button2.Invoke(new MethodInvoker(EnableConnectButton));
                             MessageBox.Show("Could not connect to PS4. No register data is available.", "No PS4 Data", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }
@@ -259,7 +262,7 @@ namespace Ps4RemotePlay.Ui
         private void button4_Click(object sender, EventArgs e)
         {
             int selectedIndex = this.comboBoxNetworkAdapter.SelectedIndex;
-            if (selectedIndex >= 0 && selectedIndex <= (this.networkAdapters.Count - 1))
+            if (selectedIndex >= 0 && selectedIndex <= (this._networkAdapters.Count - 1))
             {
                 DisableLivePcapParsingButton();
                 DisablePcapButton();
@@ -267,7 +270,7 @@ namespace Ps4RemotePlay.Ui
                 comboBoxNetworkAdapter.Enabled = false;
                 Task.Factory.StartNew(() =>
                 {
-                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+                    LivePacketDevice selectedDevice = this._networkAdapters[selectedIndex];
                     // 65536 guarantees that the whole packet will be captured on all the link layers
                     using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
                     {
@@ -283,7 +286,7 @@ namespace Ps4RemotePlay.Ui
                 });
                 Task.Factory.StartNew(() =>
                 {
-                    LivePacketDevice selectedDevice = this.networkAdapters[selectedIndex];
+                    LivePacketDevice selectedDevice = this._networkAdapters[selectedIndex];
 
                     // 65536 guarantees that the whole packet will be captured on all the link layers
                     using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -408,8 +411,8 @@ namespace Ps4RemotePlay.Ui
 
         private void AppendLogOutputToPcapLogTextBox(string text)
         {
-            this.textBoxPcapLogOutput.Text += text;
-            this.textBoxPcapLogOutput.Text += Environment.NewLine;
+            this.textBoxPcapLogOutput.AppendText(text);
+            this.textBoxPcapLogOutput.AppendText(Environment.NewLine);
         }
 
         private void SetUpComboBoxNetworkAdapter()
@@ -423,15 +426,23 @@ namespace Ps4RemotePlay.Ui
             }
             else
             {
-                networkAdapters.AddRange(allDevices);
-                foreach (var networkAdapter in networkAdapters)
+                _networkAdapters.AddRange(allDevices);
+                foreach (var networkAdapter in _networkAdapters)
                 {
                     string description = networkAdapter.Description ?? networkAdapter.Name;
                     description = description.Replace("Network adapter", "");
-                    description += String.Format(" ({0})", networkAdapter.Addresses.Last().Address);
+                    if (description.Length > 25)
+                    {
+                        description = description.Substring(0, 25);
+                        description += "...";
+                    }
+
+                    if (networkAdapter.Addresses.Count > 0)
+                    {
+                        description += $" ({networkAdapter.Addresses.Last().Address})";
+                    }
                     this.comboBoxNetworkAdapter.Items.Add(description);
                 }
-
             }
         }
 
@@ -572,7 +583,14 @@ namespace Ps4RemotePlay.Ui
                     {
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload session key: " + takionMessage.bangPayload.sessionKey)));
                         this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh pub key in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhPubKey))));
-                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Bang payload ecdh sig in hex: " + HexUtil.Hexlify(takionMessage.bangPayload.ecdhSig) + Environment.NewLine)));
+                    }
+                }
+                else
+                {
+                    if (controlMessage.Crypto != 0)
+                    {
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypoto value: " + HexUtil.Hexlify(ByteUtil.IntToByteArray(controlMessage.Crypto)))));
                     }
                 }
             }
