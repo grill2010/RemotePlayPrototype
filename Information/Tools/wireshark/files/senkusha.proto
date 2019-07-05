@@ -1,0 +1,50 @@
+syntax = "proto2";
+
+package GK.takion.proto.senkusha;
+
+message SenkushaPayload {
+    required Command command = 1;
+    enum Command {
+        ECHO_COMMAND = 0;
+        MTU_COMMAND = 1;
+        BANDWIDTH_COMMAND = 3;
+        CLIENT_MTU_COMMAND = 4;
+    }
+    
+    optional EchoCommand echoCommand = 2;
+    optional MtuCommand mtuCommand = 3;
+    optional BandwidthCommand bandwidthCommand = 4;
+    optional ClientMtuCommand clientMtuCommand = 5;
+}
+
+message EchoCommand {
+    required bool state = 1;
+}
+
+message MtuCommand {
+    required uint32 id = 1;
+    required uint32 mtuReq = 2;
+    optional uint32 mtuSent = 3;
+    optional uint32 num = 4;
+    optional uint32 sendDelay = 5;
+    optional uint32 delta = 6;
+}
+
+message BandwidthCommand {
+    required uint32 id = 1;
+    required uint32 time = 2;
+    optional uint32 bandwidth = 3;
+    optional uint32 fps = 4;
+    optional uint32 mtu = 5;
+    optional uint32 naluCount = 6;
+    optional uint32 totalSent = 7;
+    optional bool upstream = 8;
+    optional double loss = 9;
+}
+
+message ClientMtuCommand {
+    required uint32 id = 1;
+    required uint32 mtuReq = 2;
+    required bool state = 3;
+    optional uint32 mtuDown = 4;
+}

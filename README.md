@@ -48,3 +48,11 @@ The UDP stream initialization uses some ECDH mechanism (curve algo is Secp256k1)
 On top of that the streaming protocol also uses some [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode) mechanism to be sure the messages were not modified, but we do not know how this is done and how this should be implemented.
 
 The PS4 also uses some FEC correction mechanism but because of the other problems we didn't check that. The FEC correction is needed to recover lost frame packets and to avoid fragments in the stream.
+
+# Which tools did you use?
+
+- Wireshark
+- IDA
+- Apktool (for reversing the Android client and obtaining libremote.so file)
+- [Frida](https://www.frida.re/docs/functions/)
+- [API Monitor v2](http://www.rohitab.com/apimonitor)

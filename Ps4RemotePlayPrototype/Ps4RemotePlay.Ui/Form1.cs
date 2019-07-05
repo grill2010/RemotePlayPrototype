@@ -590,7 +590,7 @@ namespace Ps4RemotePlay.Ui
                 {
                     if (controlMessage.Crypto != 0)
                     {
-                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypoto value: " + HexUtil.Hexlify(ByteUtil.IntToByteArray(controlMessage.Crypto)))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypto value: " + HexUtil.Hexlify(ByteUtil.IntToByteArray(controlMessage.Crypto)))));
                     }
                 }
             }
