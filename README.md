@@ -5,7 +5,7 @@
 Quick and dirty prototype to play around with the protocol.
 This is just a research project there is no support. If there are some enthusiastic reverse engineers out there it would be great if they could contribute to the project.
 
-It was not implemented only by my own, we are a group of developers who are interested in making the remote play protocol open source. The base of the project was taken from https://github.com/grill2010/ps4-remote-play but it seems that the initial creator has unfortunately abandoned the project. I'm not professional reverse engineer so in case you have some suggestions feel free to let us know.
+It was not implemented only by my own, we are a group of developers who are interested in making the remote play protocol open source. The base of the project was taken from https://github.com/grill2010/ps4-remote-play but it seems that the initial creator has unfortunately abandoned the project. I'm not a professional reverse engineer so in case you have some suggestions feel free to let us know.
 
 And again, this is prototype code, it is ugly, and it could contain bugs.
 
