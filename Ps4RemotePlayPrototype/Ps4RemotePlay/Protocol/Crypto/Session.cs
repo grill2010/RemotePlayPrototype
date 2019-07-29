@@ -8,8 +8,8 @@ using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math.EC;
 using Org.BouncyCastle.Security;
-using Org.BouncyCastle.X509;
 using Ps4RemotePlay.Util;
+using Org.BouncyCastle.Math;
 
 namespace Ps4RemotePlay.Protocol.Crypto
 {
@@ -43,6 +43,11 @@ namespace Ps4RemotePlay.Protocol.Crypto
             X9ECParameters ecCurve = ECNamedCurveTable.GetByOid(ECCurveAlgo);
             ECPoint point = ecCurve.Curve.DecodePoint(pubKeyBytes);
             return new ECPublicKeyParameters(KeyExchangeAlgorithm, point, ECCurveAlgo);
+        }
+
+        public static ICipherParameters ConvertPrivatekeyBytesToCipherParams(byte[] privateKeyBytes)
+        {
+            return new ECPrivateKeyParameters(KeyExchangeAlgorithm, new BigInteger(privateKeyBytes), ECCurveAlgo);
         }
 
         public static byte[] GenerateSharedSecret(ICipherParameters clientPrivateKey, ICipherParameters foreignPublicKey)

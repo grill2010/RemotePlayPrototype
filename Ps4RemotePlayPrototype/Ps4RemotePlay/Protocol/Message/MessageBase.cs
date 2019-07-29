@@ -4,6 +4,8 @@ namespace Ps4RemotePlay.Protocol.Message
 {
     public abstract class MessageBase : IMessage
     {
+        protected byte OriginValue { get; set; }
+
         private byte Type { get; set; }
 
         private byte SubType { get; set; }
@@ -28,8 +30,8 @@ namespace Ps4RemotePlay.Protocol.Message
 
         public void Deserialize(BinaryReader binaryReader)
         {
-            byte value = binaryReader.ReadByte();
-            this.SetTypeAndSubTypeByByte(value);
+            this.OriginValue = binaryReader.ReadByte();
+            this.SetTypeAndSubTypeByByte(this.OriginValue);
             this.DeserializeMessage(binaryReader);
         }
 

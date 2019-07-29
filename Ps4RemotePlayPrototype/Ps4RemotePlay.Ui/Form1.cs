@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -590,7 +591,7 @@ namespace Ps4RemotePlay.Ui
                 {
                     if (controlMessage.Crypto != 0)
                     {
-                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypto value: " + HexUtil.Hexlify(ByteUtil.IntToByteArray(controlMessage.Crypto)))));
+                        this.textBoxPcapLogOutput.Invoke(new MethodInvoker(() => AppendLogOutputToPcapLogTextBox("!!! Control message with crypto value: " + HexUtil.Hexlify(ByteUtil.UIntToByteArray(controlMessage.Crypto)))));
                     }
                 }
             }

@@ -6,21 +6,21 @@ namespace Ps4RemotePlay.Protocol.Message
 {
     public class ControlMessage : MessageBase
     {
-        public int ReceiverId { get; set; }
+        public uint ReceiverId { get; set; }
 
-        public int Crypto { get; set; }
+        public uint Crypto { get; set; }
 
-        public int TagPos { get; set; }
+        public uint TagPos { get; set; }
 
         public byte Flag1 { get; set; }
 
         public byte ProtoBuffFlag { get; set; }
 
-        public short PLoadSize { get; set; }
+        public ushort PLoadSize { get; set; }
 
-        public int FuncIncr { get; set; }
+        public uint FuncIncr { get; set; }
 
-        public int ClassValue { get; set; }
+        public uint ClassValue { get; set; }
 
         public byte[] UnParsedPayload { get; set; }
 
@@ -30,7 +30,7 @@ namespace Ps4RemotePlay.Protocol.Message
             this.UnParsedPayload = new byte[0];
         }
 
-        public ControlMessage(byte subType, int receiverId, int crypto, int tagPos, byte flag1, byte protoBuffFlag, short pLoadSize, int funcIncr, int classValue) : base(0, subType)
+        public ControlMessage(byte subType, uint receiverId, uint crypto, uint tagPos, byte flag1, byte protoBuffFlag, ushort pLoadSize, uint funcIncr, uint classValue) : base(0, subType)
         {
             this.ReceiverId = receiverId;
             this.Crypto = crypto;
@@ -45,16 +45,16 @@ namespace Ps4RemotePlay.Protocol.Message
 
         protected override void SerializeMessage(BinaryWriter binaryWriter)
         {
-            binaryWriter.Write(ByteUtil.IntToByteArray(this.ReceiverId));
-            binaryWriter.Write(ByteUtil.IntToByteArray(this.Crypto));
-            binaryWriter.Write(ByteUtil.IntToByteArray(this.TagPos));
+            binaryWriter.Write(ByteUtil.UIntToByteArray(this.ReceiverId));
+            binaryWriter.Write(ByteUtil.UIntToByteArray(this.Crypto));
+            binaryWriter.Write(ByteUtil.UIntToByteArray(this.TagPos));
             binaryWriter.Write(this.Flag1);
             binaryWriter.Write(this.ProtoBuffFlag);
             binaryWriter.Write(ByteUtil.IntToShortByteArray((short)this.PLoadSize));
             if (this.PLoadSize > 4)
             {
-                binaryWriter.Write(ByteUtil.IntToByteArray(this.FuncIncr));
-                binaryWriter.Write(ByteUtil.IntToByteArray(this.ClassValue));
+                binaryWriter.Write(ByteUtil.UIntToByteArray(this.FuncIncr));
+                binaryWriter.Write(ByteUtil.UIntToByteArray(this.ClassValue));
             }
             if (this.UnParsedPayload.Length > 0)
             {
@@ -64,16 +64,16 @@ namespace Ps4RemotePlay.Protocol.Message
 
         protected override void DeserializeMessage(BinaryReader binaryReader)
         {
-            this.ReceiverId = binaryReader.ReadInt32BE();
-            this.Crypto = binaryReader.ReadInt32BE();
-            this.TagPos = binaryReader.ReadInt32BE();
+            this.ReceiverId = binaryReader.ReadUInt32BE();
+            this.Crypto = binaryReader.ReadUInt32BE();
+            this.TagPos = binaryReader.ReadUInt32BE();
             this.Flag1 = binaryReader.ReadByte();
             this.ProtoBuffFlag = binaryReader.ReadByte();
-            this.PLoadSize = binaryReader.ReadInt16BE();
+            this.PLoadSize = binaryReader.ReadUInt16BE();
             if (this.PLoadSize >= 8)
             {
-                this.FuncIncr = binaryReader.ReadInt32BE();
-                this.ClassValue = binaryReader.ReadInt32BE();
+                this.FuncIncr = binaryReader.ReadUInt32BE();
+                this.ClassValue = binaryReader.ReadUInt32BE();
             }
             if (this.ProtoBuffFlag == 1)
             {

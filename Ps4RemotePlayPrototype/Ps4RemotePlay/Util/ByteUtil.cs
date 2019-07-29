@@ -52,6 +52,16 @@ namespace Ps4RemotePlay.Util
             return new byte[] { b0, b1, b2, b3 };
         }
 
+        public static byte[] UIntToByteArray(uint value)
+        {
+            byte b0 = (byte)(value >> 24);
+            byte b1 = (byte)((value & 0x00FF0000) >> 16);
+            byte b2 = (byte)((value & 0x0000FF00) >> 8);
+            byte b3 = (byte)((value & 0x000000FF));
+
+            return new byte[] { b0, b1, b2, b3 };
+        }
+
         public static byte[] ULongToByteArray(ulong value)
         {
             byte b0 = (byte)(value >> 56);
@@ -79,6 +89,14 @@ namespace Ps4RemotePlay.Util
                     + ((b[1] & 0xFF) << 16)
                     + ((b[2] & 0xFF) << 8)
                     + (b[3] & 0xFF);
+        }
+
+        public static uint ByteArrayToUInt(byte[] b)
+        {
+            return (uint)(((b[0] & 0xFF) << 24)
+                   + ((b[1] & 0xFF) << 16)
+                   + ((b[2] & 0xFF) << 8)
+                   + (b[3] & 0xFF));
         }
 
 

@@ -11,7 +11,8 @@ And again, this is prototype code, it is ugly, and it could contain bugs.
 
 # Current status
 
-The prototype is able to register with the PS4, it can perform the initial TCP handshake with the console and it can receive the UDP stream data, but it will stop after a few seconds as the current implemented streaming protocol doesn't correctly use [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode). Unlike many other streaming services Sony also like to encrypt their audio and video frames so you can't just process them unfortunately.
+The prototype is able to register with the PS4, it can perform the initial TCP handshake with the console and it can receive audio and video stream data. The streaming protocol uses a GMAC crypto context for incoming data and for outgoing data [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode). Unlike many other streaming services Sony also like to encrypt their audio and video frames so you can't just process them unfortunately but you have to encrypt the payload in the video and audio frames at first.
+Thanks to [thestr4ng3r](https://github.com/thestr4ng3r) and his knowledge we were able to implement the GMAC logic and the connection will not be closed anymore from the PS4.
 
 # General information
 
@@ -43,11 +44,7 @@ More information about the UDP protocol can be found in the *Information* direct
 
 # What is missing
 
-The UDP stream initialization uses some ECDH mechanism (curve algo is Secp256k1) although we managed to figure out how the private and public key pair is generated and even though the PS4 is sending us the public key from the console, we do not know how the resulting shared secret is used. Probably hashed and salted and used for another AES context to decrypt the audio and video frames.
-
-On top of that the streaming protocol also uses some [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode) mechanism to be sure the messages were not modified, but we do not know how this is done and how this should be implemented.
-
-The PS4 also uses some FEC correction mechanism but because of the other problems we didn't check that. The FEC correction is needed to recover lost frame packets and to avoid fragments in the stream.
+The PS4 also uses some FEC correction mechanism but we didn't have time to check that. The FEC correction is needed to recover lost frame packets and to avoid fragments in the stream.
 
 # Which tools did you use?
 
