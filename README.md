@@ -1,4 +1,4 @@
-> Disclaimer: PS4, PlayStation 4, Dualshock and PSN are trademarks of Sony Computer Entertainment Inc. PSJoy is in no way endorsed by or affiliated with Sony Computer Entertainment Inc, or any associated subsidiaries, logos or trademarks.
+> Disclaimer: PS4, PlayStation 4, Dualshock and PSN are trademarks of Sony Computer Entertainment Inc. This project is in no way endorsed by or affiliated with Sony Computer Entertainment Inc, or any associated subsidiaries, logos or trademarks.
 
 # RemotePlayPrototype info
 
