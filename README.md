@@ -11,7 +11,7 @@ And again, this is prototype code, it is ugly, and it could contain bugs.
 
 # Current status
 
-The prototype is able to register with the PS4, it can perform the initial TCP handshake with the console and it can receive audio and video stream data. The streaming protocol uses a GMAC crypto context for incoming data and for outgoing data [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode). Unlike many other streaming services Sony also like to encrypt their audio and video frames so you can't just process them unfortunately but you have to encrypt the payload in the video and audio frames at first.
+The prototype is able to register with the PS4, it can perform the initial TCP handshake with the console and it can receive audio and video stream data. The streaming protocol uses a [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode) crypto context for incoming data and for outgoing data. Unlike many other streaming services Sony also likes to encrypt their audio and video frames so you can't just process them unfortunately but you have to decrypt the payload in the video and audio frames at first.
 Thanks to [thestr4ng3r](https://github.com/thestr4ng3r) and his knowledge we were able to implement the GMAC logic and the connection will not be closed anymore from the PS4.
 
 # General information
