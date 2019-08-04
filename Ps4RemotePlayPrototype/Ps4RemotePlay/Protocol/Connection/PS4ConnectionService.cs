@@ -433,7 +433,6 @@ namespace Ps4RemotePlay.Protocol.Connection
             var ecdhKeyPair = CryptoService.GenerateEcdhKeyPair();
             // Get public key bytes
             var ownPublicKey = Session.GetPublicKeyBytesFromKeyPair(ecdhKeyPair);
-            string test = HexUtil.Hexlify(ownPublicKey);
 
             // Calculate ECDH pubkey signature
             var ecdhSignature = Session.CalculateHMAC(handshakeKey, ownPublicKey);

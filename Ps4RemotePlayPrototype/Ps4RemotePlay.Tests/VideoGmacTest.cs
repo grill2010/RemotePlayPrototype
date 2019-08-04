@@ -232,7 +232,7 @@ namespace Ps4RemotePlay.Tests
 
             Assert.Equal(nalu.Length, videoMessage.VideoPayload.Length);
 
-            byte[] decryptedVideoData = CryptoService.EncryptGmacMessage(gmacInfo, videoMessage.TagPos + 16, videoMessage.VideoPayload);
+            byte[] decryptedVideoData = CryptoService.DecryptGmacMessage(gmacInfo, videoMessage.TagPos + 16, videoMessage.VideoPayload);
             Assert.Equal(nalu, decryptedVideoData);
         }
     }

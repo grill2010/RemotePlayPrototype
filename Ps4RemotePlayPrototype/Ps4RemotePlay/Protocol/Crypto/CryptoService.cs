@@ -175,11 +175,6 @@ namespace Ps4RemotePlay.Protocol.Crypto
                 buffer[gmacPositionInBuffer + i] = gmac[i];
             }
 
-            /*for (int i = 0; i < gmac.Length; i++)
-            {
-                buffer[gmacPositionInBuffer + i] = gmac[(macSize - 1) - i];
-            }*/
-
             return gmac;
         }
 

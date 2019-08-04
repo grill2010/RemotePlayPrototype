@@ -50,7 +50,7 @@ namespace Ps4RemotePlay.Protocol.Message
             TotalUnitsInFrame = (ushort)(((value >> 0xa) & 0x7ff) + 1);
             AdditionalUnitsInFrame = (ushort)(value & 0x3ff);
             Codec = binaryReader.ReadByte();
-            uint skippBytes = binaryReader.ReadUInt16() + (uint)binaryReader.ReadUInt16();
+            uint skippBytes = binaryReader.ReadUInt32();
             TagPos = binaryReader.ReadUInt32BE();
             byte skippBytes2 = binaryReader.ReadByte();
             Unknown = binaryReader.ReadByte();
