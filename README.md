@@ -11,6 +11,8 @@ And again, this is prototype code, it is ugly, and it could contain bugs.
 
 # Current status
 
+INFO: REGISTER IS CURRENTLY NOT WORKING DUE RECENT FIRMWARE 7.0 UPDATE
+
 The prototype is able to register with the PS4, it can perform the initial TCP handshake with the console and it can receive audio and video stream data. The streaming protocol uses a [GMAC](https://en.wikipedia.org/wiki/Galois/Counter_Mode) crypto context for incoming data and for outgoing data. Unlike many other streaming services Sony also likes to encrypt their audio and video frames so you can't just process them unfortunately but you have to decrypt the payload in the video and audio frames at first.
 Thanks to [thestr4ng3r](https://github.com/thestr4ng3r) and his knowledge we were able to implement the GMAC logic and the connection will not be closed anymore from the PS4. Furthermore he pointed out that the official PS4 Remote Play is using the jerasure library for the FEC. Particularly cauchy reed solomon. The FEC packages are the additional data in the video frame messages. FEC is also used for audio. In general almost all important information is available now to build a stable client.
 
