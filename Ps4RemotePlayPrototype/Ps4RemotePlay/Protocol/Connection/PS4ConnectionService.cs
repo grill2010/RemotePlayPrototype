@@ -121,7 +121,7 @@ namespace Ps4RemotePlay.Protocol.Connection
                                          "Connection: close\r\n" +
                                          "Content-Length: 0\r\n" +
                                          $"RP-Registkey: {ps4RemotePlayData.RemotePlay.RegistrationKey}\r\n" +
-                                         "RP-Version: 8.0\r\n" +
+                                         "RP-Version: 9.0\r\n" +
                                          "\r\n";
 
                     socket.Send(Encoding.UTF8.GetBytes(requestData));
@@ -210,7 +210,7 @@ namespace Ps4RemotePlay.Protocol.Connection
                                      "Connection: keep-alive\r\n" +
                                      "Content-Length: 0\r\n" +
                                      $"RP-Auth: {encodedRegistrationKey}\r\n" +
-                                     "RP-Version: 8.0\r\n" +
+                                     "RP-Version: 9.0\r\n" +
                                      $"RP-Did: {encodedDid}\r\n" +
                                      "RP-ControllerType: 3\r\n" +
                                      "RP-ClientType: 11\r\n" +
