@@ -1,3 +1,6 @@
+-- created by fueryon (https://github.com/fueryon)
+-- original source can be found here (https://github.com/fueryon/ps4-remote-play/blob/master/takion/takion.lua)
+
 -- initial wireshark lua dissector for takion udp communication
 -- use one of 128technology/protobuf_dissector forks for working protobuf dissector
 
